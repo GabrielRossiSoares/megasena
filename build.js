@@ -33,8 +33,10 @@ function writeJSON(file, obj) {
   const lastConcurso = results[0]?.concurso ?? 0;
   const stats = calcStats(results);
 
+  // Usa o generatedAt do data.json canônico (só muda quando há concurso
+  // novo). Assim o build é determinístico e não gera commits-ruído.
   const dataOut = {
-    generatedAt: new Date().toISOString(),
+    generatedAt: raw.generatedAt || `concurso-${lastConcurso}`,
     total: results.length,
     lastConcurso,
     nextConcurso: lastConcurso + 1,
