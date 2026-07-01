@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Mega-Sena Dashboard Server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.js"],
+      "port": 3000
+    },
+    {
+      "name": "Mega-Sena Fetch History",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["fetch-history.js"],
+      "port": 0
+    }
+  ]
+}

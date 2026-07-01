@@ -1,0 +1,3393 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Mega-Sena · Análise Estatística</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+      :root {
+        --bg: #080b14;
+        --bg2: #0d1120;
+        --bg3: #131929;
+        --bg4: #1a2035;
+        --border: rgba(99, 179, 237, 0.12);
+        --border2: rgba(99, 179, 237, 0.06);
+        --text: #e2e8f0;
+        --muted: #64748b;
+        --dim: #334155;
+        --green: #10b981;
+        --green2: #059669;
+        --blue: #3b82f6;
+        --cyan: #06b6d4;
+        --orange: #f97316;
+        --purple: #8b5cf6;
+        --pink: #ec4899;
+        --gold: #f59e0b;
+        --red: #ef4444;
+        --radius: 14px;
+        --mono: "JetBrains Mono", monospace;
+        --sans: "Sora", sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      header {
+        background: rgba(13, 17, 32, 0.95);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .logo-text {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--green);
+        letter-spacing: -0.02em;
+      }
+      .logo-sub {
+        font-size: 9px;
+        color: var(--muted);
+        font-family: var(--mono);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .status-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 20px;
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--green);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+      }
+      .sdot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--green);
+        animation: pulse 2s infinite;
+      }
+      .sdot.off {
+        background: var(--red);
+        animation: none;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+      #uptime {
+        font-size: 11px;
+        color: var(--muted);
+        font-family: var(--mono);
+      }
+      .hbtn {
+        background: transparent;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        color: var(--green);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: var(--sans);
+      }
+      .hbtn:hover {
+        background: rgba(16, 185, 129, 0.12);
+      }
+      nav {
+        background: rgba(13, 17, 32, 0.9);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border2);
+        padding: 0 24px;
+        display: flex;
+        gap: 0;
+        position: sticky;
+        top: 57px;
+        z-index: 99;
+        overflow-x: auto;
+      }
+      .ntab {
+        padding: 12px 20px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--muted);
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .ntab.a {
+        color: var(--green);
+        border-bottom-color: var(--green);
+      }
+      .ntab:hover:not(.a) {
+        color: var(--text);
+      }
+      #fbar {
+        background: var(--bg2);
+        border-bottom: 1px solid var(--border);
+        padding: 10px 24px;
+        display: none;
+        align-items: center;
+        gap: 14px;
+      }
+      #fbar.v {
+        display: flex;
+      }
+      #ftrack {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 4px;
+        height: 6px;
+        overflow: hidden;
+      }
+      #ffill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--green), var(--cyan));
+        border-radius: 4px;
+        transition: width 0.3s;
+      }
+      #flabel {
+        font-size: 11px;
+        color: var(--muted);
+        font-family: var(--mono);
+        min-width: 260px;
+      }
+      #fpct {
+        font-size: 12px;
+        color: var(--green);
+        font-weight: 700;
+        font-family: var(--mono);
+        min-width: 44px;
+      }
+      .wrap {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 20px;
+        position: relative;
+        z-index: 1;
+      }
+      .pane {
+        display: none;
+      }
+      .pane.a {
+        display: block;
+      }
+      .g4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+      .g3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+      .g2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+      @media (max-width: 1000px) {
+        .g4 {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .g3 {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 640px) {
+        .g4,
+        .g3,
+        .g2 {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: var(--bg2);
+        border: 1px solid var(--border2);
+        border-radius: var(--radius);
+        padding: 18px;
+        transition: border-color 0.2s;
+      }
+      .card:hover {
+        border-color: var(--border);
+      }
+      .ct {
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+      .cv {
+        font-size: 28px;
+        font-weight: 800;
+        font-family: var(--mono);
+        letter-spacing: -0.02em;
+      }
+      .cs {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .dbox {
+        background: var(--bg3);
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin-top: 10px;
+        border: 1px solid var(--border2);
+      }
+      .ddate {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--green);
+      }
+      .dcd {
+        font-size: 11px;
+        color: var(--gold);
+        margin-top: 3px;
+      }
+      .sec {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--muted);
+        font-weight: 700;
+        margin-bottom: 14px;
+      }
+      .sec::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border2);
+      }
+      .sgrid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      @media (max-width: 1000px) {
+        .sgrid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 640px) {
+        .sgrid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .sc {
+        background: var(--bg2);
+        border-radius: var(--radius);
+        padding: 20px;
+        position: relative;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+      .sc:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      }
+      .sc.s1 {
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.07);
+      }
+      .sc.s2 {
+        border: 1px solid rgba(59, 130, 246, 0.3);
+      }
+      .sc.s3 {
+        border: 1px solid rgba(245, 158, 11, 0.25);
+      }
+      .sbadge {
+        position: absolute;
+        top: -11px;
+        left: 16px;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 3px 14px;
+        border-radius: 20px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .b1 {
+        background: var(--green);
+        color: #fff;
+      }
+      .b2 {
+        background: var(--blue);
+        color: #fff;
+      }
+      .b3 {
+        background: var(--gold);
+        color: #0a0a0a;
+      }
+      .sstrat {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 12px 0 10px;
+      }
+      .sballs {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .ball {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        color: #fff;
+        font-family: var(--mono);
+        flex-shrink: 0;
+      }
+      .ball-xs {
+        width: 22px;
+        height: 22px;
+        font-size: 8px;
+      }
+      .ball-sm {
+        width: 32px;
+        height: 32px;
+        font-size: 11px;
+      }
+      .srow {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .strk {
+        height: 5px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+      .sfil {
+        height: 100%;
+        border-radius: 3px;
+      }
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .tag {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-family: var(--mono);
+      }
+      .tg {
+        background: rgba(16, 185, 129, 0.12);
+        color: var(--green);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+      }
+      .tb {
+        background: rgba(59, 130, 246, 0.12);
+        color: var(--blue);
+        border: 1px solid rgba(59, 130, 246, 0.25);
+      }
+      .to {
+        background: rgba(249, 115, 22, 0.12);
+        color: var(--orange);
+        border: 1px solid rgba(249, 115, 22, 0.25);
+      }
+      .tp {
+        background: rgba(139, 92, 246, 0.12);
+        color: var(--purple);
+        border: 1px solid rgba(139, 92, 246, 0.25);
+      }
+      .hmap {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 5px;
+      }
+      .hc {
+        aspect-ratio: 1;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: default;
+        transition: transform 0.15s;
+        font-family: var(--mono);
+        position: relative;
+      }
+      .hc:hover {
+        transform: scale(1.2);
+        z-index: 10;
+      }
+      .hc::after {
+        content: attr(data-tip);
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 6px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: #000;
+        color: #fff;
+        font-size: 10px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        white-space: nowrap;
+        z-index: 20;
+        font-family: var(--mono);
+      }
+      .hc:hover::after {
+        display: block;
+      }
+      .br {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 7px;
+      }
+      .bn {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        font-weight: 700;
+        flex-shrink: 0;
+        font-family: var(--mono);
+      }
+      .bt {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        height: 7px;
+        overflow: hidden;
+      }
+      .bf {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.6s;
+      }
+      .bv {
+        font-size: 10px;
+        color: var(--muted);
+        min-width: 28px;
+        text-align: right;
+        flex-shrink: 0;
+        font-family: var(--mono);
+      }
+      .dr {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 9px;
+      }
+      .dl {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text);
+        min-width: 52px;
+        font-family: var(--mono);
+      }
+      .dt {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        height: 18px;
+        overflow: hidden;
+      }
+      .df {
+        height: 100%;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        padding-left: 8px;
+        font-size: 10px;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.85);
+        transition: width 0.8s;
+        font-family: var(--mono);
+      }
+      .hr {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border2);
+        flex-wrap: wrap;
+      }
+      .hr:last-child {
+        border-bottom: none;
+      }
+      .hn {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--muted);
+        min-width: 52px;
+        font-family: var(--mono);
+      }
+      .hd {
+        font-size: 10px;
+        color: var(--dim);
+        min-width: 85px;
+      }
+      .hb2 {
+        display: flex;
+        gap: 3px;
+        flex: 1;
+        flex-wrap: wrap;
+      }
+      .hbdg {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 20px;
+        flex-shrink: 0;
+      }
+      .bw {
+        background: rgba(16, 185, 129, 0.12);
+        color: var(--green);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+      }
+      .ba {
+        background: rgba(245, 158, 11, 0.12);
+        color: var(--gold);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+      }
+      .hwrap {
+        max-height: 500px;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+      .hwrap::-webkit-scrollbar {
+        width: 3px;
+      }
+      .hwrap::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 3px;
+      }
+      /* MEUS JOGOS */
+      .mji {
+        background: linear-gradient(
+          135deg,
+          rgba(16, 185, 129, 0.08),
+          rgba(59, 130, 246, 0.06)
+        );
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .mji h2 {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--text);
+        margin-bottom: 6px;
+      }
+      .mji p {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+      .mja {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .mjgl {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      .mjgr {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--bg3);
+        border-radius: 10px;
+        padding: 12px 14px;
+        border: 1px solid var(--border2);
+        flex-wrap: wrap;
+      }
+      .mjgn {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--muted);
+        min-width: 50px;
+        font-family: var(--mono);
+      }
+      .mjins {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .mjin {
+        width: 46px;
+        height: 40px;
+        background: var(--bg4);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 700;
+        text-align: center;
+        font-family: var(--mono);
+        transition:
+          border-color 0.2s,
+          background 0.2s;
+        outline: none;
+      }
+      .mjin:focus {
+        border-color: var(--green);
+        background: rgba(16, 185, 129, 0.06);
+      }
+      .mjin.ok {
+        border-color: var(--green);
+        background: rgba(16, 185, 129, 0.08);
+        color: var(--green);
+      }
+      .mjin.er {
+        border-color: var(--red);
+        background: rgba(239, 68, 68, 0.06);
+        color: var(--red);
+      }
+      .mjrm {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px;
+        transition: color 0.2s;
+        line-height: 1;
+      }
+      .mjrm:hover {
+        color: var(--red);
+      }
+      .btnr {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        font-family: var(--sans);
+        letter-spacing: 0.04em;
+      }
+      .btng {
+        background: var(--green);
+        color: #fff;
+      }
+      .btng:hover {
+        background: var(--green2);
+      }
+      .btno {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      .btno:hover {
+        border-color: var(--green);
+        color: var(--green);
+      }
+      .btnb {
+        background: var(--blue);
+        color: #fff;
+      }
+      .btnb:hover {
+        background: #2563eb;
+      }
+      .btnd {
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: var(--red);
+      }
+      .btnd:hover {
+        background: rgba(239, 68, 68, 0.25);
+      }
+      .mjag {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .mjrc {
+        background: var(--bg2);
+        border-radius: var(--radius);
+        padding: 18px;
+        border: 1px solid var(--border2);
+      }
+      .mjrc.best {
+        border-color: rgba(16, 185, 129, 0.4);
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.08);
+      }
+      .mjrh {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .mjrt {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .mjball {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        font-family: var(--mono);
+      }
+      .mjballs {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .msr {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        font-size: 11px;
+      }
+      .msl {
+        color: var(--muted);
+      }
+      .msv {
+        font-weight: 700;
+        font-family: var(--mono);
+      }
+      .ok {
+        color: var(--green);
+      }
+      .warn {
+        color: var(--gold);
+      }
+      .bad {
+        color: var(--red);
+      }
+      .adv {
+        background: var(--bg3);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.6;
+        margin-top: 10px;
+        border-left: 3px solid var(--border);
+      }
+      .adv.good {
+        border-left-color: var(--green);
+        color: #6ee7b7;
+      }
+      .adv.warn {
+        border-left-color: var(--gold);
+        color: #fcd34d;
+      }
+      .adv.bad {
+        border-left-color: var(--red);
+        color: #fca5a5;
+      }
+      .mjrec {
+        background: linear-gradient(
+          135deg,
+          rgba(16, 185, 129, 0.1),
+          rgba(6, 182, 212, 0.06)
+        );
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .mjrecbody {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      @media (max-width: 640px) {
+        .mjrecbody {
+          grid-template-columns: 1fr;
+        }
+      }
+      .mjreci {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        padding: 14px;
+      }
+      .mjrecit {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      .rules-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 10px;
+      }
+      .ri {
+        background: var(--bg3);
+        border-radius: 10px;
+        padding: 14px;
+        border-left: 3px solid var(--green);
+      }
+      .ric {
+        font-size: 20px;
+        margin-bottom: 6px;
+      }
+      .rit {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 3px;
+      }
+      .rid {
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .li {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .ld {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .cw {
+        position: relative;
+        width: 100%;
+      }
+      #toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: linear-gradient(135deg, #065f46, #064e3b);
+        color: #fff;
+        padding: 14px 20px;
+        border-radius: var(--radius);
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        transform: translateY(120%);
+        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        z-index: 9999;
+        max-width: 340px;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+      }
+      #toast.show {
+        transform: translateY(0);
+      }
+      .nbdg {
+        display: inline-block;
+        background: var(--green);
+        color: #fff;
+        font-size: 9px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 20px;
+        margin-left: 6px;
+      }
+      ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+      }
+
+      /* MINHAS APOSTAS */
+      .ap-form {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .ap-form-title {
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--text);
+        margin-bottom: 14px;
+      }
+      .ap-form-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      .ap-input {
+        width: 64px;
+        height: 40px;
+        background: var(--bg4);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 700;
+        text-align: center;
+        font-family: var(--mono);
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .ap-input:focus {
+        border-color: var(--green);
+      }
+      .ap-input-wide {
+        width: 100px;
+      }
+      .ap-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      .ap-sum-card {
+        background: var(--bg2);
+        border: 1px solid var(--border2);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+      }
+      .ap-sum-val {
+        font-size: 24px;
+        font-weight: 800;
+        font-family: var(--mono);
+      }
+      .ap-sum-lbl {
+        font-size: 10px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-top: 4px;
+        font-weight: 700;
+      }
+      .ap-group {
+        margin-bottom: 20px;
+      }
+      .ap-group-title {
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--text);
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border2);
+      }
+      .ap-bet-card {
+        background: var(--bg3);
+        border: 1px solid var(--border2);
+        border-radius: 12px;
+        padding: 14px;
+        margin-bottom: 10px;
+        transition: border-color 0.2s;
+      }
+      .ap-bet-card:hover {
+        border-color: var(--border);
+      }
+      .ap-bet-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .ap-bet-balls {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+      }
+      .ap-ball {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        font-family: var(--mono);
+        color: #fff;
+        transition: all 0.3s;
+      }
+      .ap-ball.match {
+        background: var(--green) !important;
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+      }
+      .ap-ball.nomatch {
+        background: rgba(100, 116, 139, 0.25) !important;
+        color: var(--dim);
+      }
+      .ap-ball.pending {
+        background: var(--blue);
+      }
+      .ap-drawn {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .ap-drawn-label {
+        font-size: 10px;
+        color: var(--muted);
+        font-weight: 700;
+        margin-right: 6px;
+      }
+      .ap-result-badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 3px 12px;
+        border-radius: 20px;
+        letter-spacing: 0.04em;
+      }
+      .ap-badge-sena {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: #fff;
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+      }
+      .ap-badge-quina {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: #0a0a0a;
+      }
+      .ap-badge-quadra {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: #fff;
+      }
+      .ap-badge-normal {
+        background: rgba(100, 116, 139, 0.15);
+        color: var(--muted);
+        border: 1px solid rgba(100, 116, 139, 0.2);
+      }
+      .ap-badge-pending {
+        background: rgba(6, 182, 212, 0.12);
+        color: var(--cyan);
+        border: 1px solid rgba(6, 182, 212, 0.25);
+      }
+      .ap-del-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 14px;
+        padding: 4px 8px;
+        transition: color 0.2s;
+        line-height: 1;
+      }
+      .ap-del-btn:hover {
+        color: var(--red);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <div style="font-size: 22px">&#127920;</div>
+        <div>
+          <div class="logo-text">MEGA-SENA</div>
+          <div class="logo-sub">Análise Estatística</div>
+        </div>
+        <div class="status-pill">
+          <div class="sdot" id="sdot"></div>
+          <span id="stxt">Conectando...</span>
+        </div>
+      </div>
+      <div id="uptime">Carregando...</div>
+      <button class="hbtn" onclick="startFetch()">
+        &#128229; Buscar histórico completo (1996 → hoje)
+      </button>
+    </header>
+    <nav>
+      <div class="ntab a" onclick="showTab('dash', this)">&#128202; Dashboard</div>
+      <div class="ntab" onclick="showTab('mj', this)">&#127919; Meus Jogos</div>
+      <div class="ntab" onclick="showTab('apostas', this)">&#128176; Minhas Apostas</div>
+      <div class="ntab" onclick="showTab('deep', this)">&#128300; Análise Profunda</div>
+      <div class="ntab" onclick="showTab('hist', this)">&#128203; Histórico</div>
+    </nav>
+    <div id="fbar">
+      <div id="flabel">Aguardando...</div>
+      <div id="ftrack"><div id="ffill" style="width: 0%"></div></div>
+      <span id="fpct">0%</span>
+    </div>
+
+    <div class="wrap">
+      <!-- ══════════ DASHBOARD ══════════ -->
+      <div class="pane a" id="tab-dash">
+        <div class="g4">
+          <div class="card">
+            <div class="ct">Concursos analisados</div>
+            <div class="cv" id="kT" style="color: var(--green)">—</div>
+            <div class="cs" id="kP">—</div>
+            <div id="kNote" style="font-size:10px;color:var(--dim);margin-top:4px;font-style:italic"></div>
+          </div>
+          <div class="card">
+            <div class="ct">Próximo sorteio</div>
+            <div class="cv" id="kN" style="color: var(--green)">—</div>
+            <div class="dbox">
+              <div class="ddate" id="dD">—</div>
+              <div class="dcd" id="dC">—</div>
+              <div
+                style="font-size: 11px; color: var(--muted); margin-top: 2px"
+                id="dPrize"
+              >
+                Prêmio estimado: R$ 13 milhões
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ct">Acumulados</div>
+            <div class="cv" id="kA" style="color: var(--gold)">—</div>
+            <div class="cs" id="kAp">—</div>
+          </div>
+          <div class="card">
+            <div class="ct">Probabilidade da sena</div>
+            <div class="cv" style="font-size: 16px; color: var(--orange)">
+              1:50.063.860
+            </div>
+            <div class="cs">Ter · Qui · Sáb — 21h (Brasília)</div>
+          </div>
+        </div>
+        <div style="margin-bottom: 20px">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 16px;
+              flex-wrap: wrap;
+              gap: 8px;
+            "
+          >
+            <div>
+              <div style="font-size: 18px; font-weight: 800">
+                3 Jogos Sugeridos — ordenados por probabilidade
+              </div>
+              <div style="font-size: 12px; color: var(--muted)" id="sLbl">
+                Concurso #— · —
+              </div>
+            </div>
+            <div
+              style="font-size: 11px; color: var(--muted); font-style: italic"
+            >
+              &#9888;&#65039; Baseado em frequência histórica. A Mega-Sena é aleatória.
+            </div>
+          </div>
+          <div class="sgrid" id="sCds">
+            <div
+              class="card"
+              style="text-align: center; padding: 30px; color: var(--muted)"
+            >
+              Calculando sugestões...
+            </div>
+          </div>
+        </div>
+        <div class="g2">
+          <div class="card">
+            <div class="sec">Frequência dos 60 números</div>
+            <div class="cw" style="height: 200px">
+              <canvas id="cFreq"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="sec">Soma das dezenas — últimos 40 sorteios</div>
+            <div class="cw" style="height: 200px">
+              <canvas id="cSum"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom: 20px">
+          <div class="sec">Mapa de calor — frequência por número</div>
+          <div class="legend">
+            <div class="li">
+              <div class="ld" style="background: #f97316"></div>
+              Muito frequente
+            </div>
+            <div class="li">
+              <div class="ld" style="background: #f59e0b"></div>
+              Frequente
+            </div>
+            <div class="li">
+              <div class="ld" style="background: #10b981"></div>
+              Moderado
+            </div>
+            <div class="li">
+              <div class="ld" style="background: #3b82f6"></div>
+              Pouco frequente
+            </div>
+          </div>
+          <div class="hmap" id="hmap"></div>
+        </div>
+
+        <!-- ══ Ganhadores, Valores & Probabilidade ══ -->
+        <div class="card" style="margin-bottom: 20px">
+          <div class="sec">💰 Ganhadores, valores e probabilidade</div>
+          <div class="g4" id="winKpis" style="margin-bottom:16px"></div>
+          <div class="g2">
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--muted)">
+                🍀 Números da sorte — mais presentes em sorteios com ganhador
+                <span style="font-weight:400;font-style:italic">(vezes premiado · prob. de sair · valor associado)</span>
+              </div>
+              <div id="luckyNums"></div>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--muted)">
+                📍 Cidades mais premiadas na sena
+              </div>
+              <div id="topCities"></div>
+              <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--muted)">
+                🎯 Sua chance por tipo de aposta
+              </div>
+              <div id="betOdds"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="g3">
+          <div class="card">
+            <div class="sec">Top 10 mais sorteados</div>
+            <div id="top10"></div>
+          </div>
+          <div class="card">
+            <div class="sec">Top 10 mais atrasados</div>
+            <div id="bot10"></div>
+          </div>
+          <div class="card">
+            <div class="sec">Frequência por dezena</div>
+            <div id="decs"></div>
+          </div>
+        </div>
+        <div class="g2">
+          <div class="card">
+            <div class="sec">Padrões históricos</div>
+            <div class="g2" style="gap: 10px; margin-bottom: 14px">
+              <div
+                style="
+                  background: var(--bg3);
+                  border-radius: 10px;
+                  padding: 12px;
+                "
+              >
+                <div
+                  style="
+                    font-size: 9px;
+                    color: var(--muted);
+                    text-transform: uppercase;
+                    letter-spacing: 0.1em;
+                    margin-bottom: 4px;
+                  "
+                >
+                  Pares × Ímpares
+                </div>
+                <div
+                  style="
+                    font-size: 20px;
+                    font-weight: 800;
+                    font-family: var(--mono);
+                  "
+                  id="pE"
+                >
+                  —
+                </div>
+              </div>
+              <div
+                style="
+                  background: var(--bg3);
+                  border-radius: 10px;
+                  padding: 12px;
+                "
+              >
+                <div
+                  style="
+                    font-size: 9px;
+                    color: var(--muted);
+                    text-transform: uppercase;
+                    letter-spacing: 0.1em;
+                    margin-bottom: 4px;
+                  "
+                >
+                  Baixos × Altos
+                </div>
+                <div
+                  style="
+                    font-size: 20px;
+                    font-weight: 800;
+                    font-family: var(--mono);
+                  "
+                  id="pH"
+                >
+                  —
+                </div>
+              </div>
+              <div
+                style="
+                  background: var(--bg3);
+                  border-radius: 10px;
+                  padding: 12px;
+                "
+              >
+                <div
+                  style="
+                    font-size: 9px;
+                    color: var(--muted);
+                    text-transform: uppercase;
+                    letter-spacing: 0.1em;
+                    margin-bottom: 4px;
+                  "
+                >
+                  Soma mínima
+                </div>
+                <div
+                  style="
+                    font-size: 20px;
+                    font-weight: 800;
+                    font-family: var(--mono);
+                    color: var(--cyan);
+                  "
+                  id="pMn"
+                >
+                  —
+                </div>
+              </div>
+              <div
+                style="
+                  background: var(--bg3);
+                  border-radius: 10px;
+                  padding: 12px;
+                "
+              >
+                <div
+                  style="
+                    font-size: 9px;
+                    color: var(--muted);
+                    text-transform: uppercase;
+                    letter-spacing: 0.1em;
+                    margin-bottom: 4px;
+                  "
+                >
+                  Soma máxima
+                </div>
+                <div
+                  style="
+                    font-size: 20px;
+                    font-weight: 800;
+                    font-family: var(--mono);
+                    color: var(--orange);
+                  "
+                  id="pMx"
+                >
+                  —
+                </div>
+              </div>
+            </div>
+            <div class="cw" style="height: 140px">
+              <canvas id="cEven"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="sec">Regras e dicas</div>
+            <div class="rules-grid">
+              <div class="ri">
+                <div class="ric">&#127919;</div>
+                <div class="rit">6 números (01–60)</div>
+                <div class="rid">Acerte 4, 5 ou 6 dezenas para ganhar.</div>
+              </div>
+              <div class="ri" style="border-left-color: var(--blue)">
+                <div class="ric">&#9878;&#65039;</div>
+                <div class="rit">Equilíbrio par/ímpar</div>
+                <div class="rid">
+                  3+3 ou 2+4 são os padrões mais frequentes.
+                </div>
+              </div>
+              <div class="ri" style="border-left-color: var(--orange)">
+                <div class="ric">&#128202;</div>
+                <div class="rit">Soma ideal: 150–210</div>
+                <div class="rid">~70% dos prêmios caem nessa faixa.</div>
+              </div>
+              <div class="ri" style="border-left-color: var(--purple)">
+                <div class="ric">&#128450;&#65039;</div>
+                <div class="rit">Distribuição nas dezenas</div>
+                <div class="rid">Cubra pelo menos 4 das 6 faixas de 10.</div>
+              </div>
+              <div class="ri" style="border-left-color: var(--pink)">
+                <div class="ric">&#128290;</div>
+                <div class="rit">Evite longas sequências</div>
+                <div class="rid">3+ consecutivos é raro historicamente.</div>
+              </div>
+              <div class="ri" style="border-left-color: var(--gold)">
+                <div class="ric">&#128197;</div>
+                <div class="rit">Ter · Qui · Sáb — 21h</div>
+                <div class="rid">Online até 19h30 no dia do sorteio.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ MEUS JOGOS ══════════ -->
+      <div class="pane" id="tab-mj">
+        <div class="mji">
+          <h2>&#127919; Análise dos Seus Jogos</h2>
+          <p>
+            Digite seus números e veja como cada jogo se comporta
+            estatisticamente com base nos
+            <strong id="mjTotal">—</strong> concursos analisados. Descubra qual
+            tem o melhor perfil de probabilidade, pontos fortes, fracos, e o que
+            mudar para melhorar.
+          </p>
+        </div>
+        <div class="mja">
+          <div
+            style="
+              font-size: 12px;
+              font-weight: 700;
+              color: var(--text);
+              margin-bottom: 14px;
+            "
+          >
+            &#9999;&#65039; Seus jogos
+            <span style="font-size: 10px; color: var(--muted); font-weight: 400"
+              >(máx. 10 · 6 números de 01 a 60 cada)</span
+            >
+          </div>
+          <div class="mjgl" id="mjList"></div>
+          <div class="btnr">
+            <button class="btn btng" onclick="analyzeMJ()">
+              &#128269; Analisar meus jogos
+            </button>
+            <button class="btn btno" onclick="addMJRow()">
+              + Adicionar jogo
+            </button>
+            <button class="btn btno" onclick="clearMJ()">&#128465; Limpar</button>
+            <button class="btn btno" onclick="randomMJ()">
+              &#127922; Preencher aleatório
+            </button>
+          </div>
+        </div>
+        <div id="mjOut" style="display: none">
+          <div class="mjrec" id="mjRec" style="display: none">
+            <div
+              style="
+                font-size: 14px;
+                font-weight: 800;
+                color: var(--green);
+                margin-bottom: 14px;
+              "
+            >
+              &#127942; Recomendação para o próximo sorteio
+            </div>
+            <div class="mjrecbody" id="mjRecBody"></div>
+          </div>
+          <div class="sec" style="margin-bottom: 12px">
+            Análise individual por jogo
+          </div>
+          <div class="mjag" id="mjGrid"></div>
+          <div class="card" style="margin-bottom: 20px">
+            <div class="sec">Comparativo radar — seus jogos</div>
+            <div class="cw" style="height: 220px">
+              <canvas id="cMJComp"></canvas>
+            </div>
+          </div>
+        </div>
+        <div
+          id="mjEmpty"
+          style="
+            text-align: center;
+            padding: 40px;
+            color: var(--muted);
+            font-size: 13px;
+          "
+        >
+          <div style="font-size: 40px; margin-bottom: 12px">&#127921;</div>
+          <div>Digite seus números e clique em <strong>Analisar</strong></div>
+          <div style="font-size: 11px; margin-top: 6px; color: var(--dim)">
+            Os resultados aparecem aqui
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ MINHAS APOSTAS ══════════ -->
+      <div class="pane" id="tab-apostas">
+        <div class="mji">
+          <h2>&#128176; Minhas Apostas</h2>
+          <p>
+            Registre suas apostas e acompanhe os resultados automaticamente.
+            Quando o sorteio acontecer, seus acertos serão destacados em tempo real.
+          </p>
+        </div>
+
+        <!-- Resumo -->
+        <div class="ap-summary" id="apSummary">
+          <div class="ap-sum-card">
+            <div class="ap-sum-val" id="apTotalBets" style="color:var(--green)">0</div>
+            <div class="ap-sum-lbl">Total de apostas</div>
+          </div>
+          <div class="ap-sum-card">
+            <div class="ap-sum-val" id="apBestResult" style="color:var(--gold)">—</div>
+            <div class="ap-sum-lbl">Melhor resultado</div>
+          </div>
+          <div class="ap-sum-card">
+            <div class="ap-sum-val" id="apWinCount" style="color:var(--cyan)">0</div>
+            <div class="ap-sum-lbl">Quadras+ ganhas</div>
+          </div>
+          <div class="ap-sum-card">
+            <div class="ap-sum-val" id="apSpent" style="color:var(--orange)">R$ 0</div>
+            <div class="ap-sum-lbl">Investido (est.)</div>
+          </div>
+        </div>
+
+        <!-- Formulário -->
+        <div class="ap-form">
+          <div class="ap-form-title">&#128221; Registrar Nova Aposta</div>
+          <div class="ap-form-row">
+            <label style="font-size:11px;color:var(--muted);font-weight:700">Concurso:</label>
+            <input id="apConc" type="number" class="ap-input ap-input-wide" placeholder="Ex: 2990" />
+          </div>
+          <div class="ap-form-row">
+            <label style="font-size:11px;color:var(--muted);font-weight:700">Dezenas:</label>
+            <input id="apN1" type="number" min="1" max="60" class="ap-input" placeholder="01" />
+            <input id="apN2" type="number" min="1" max="60" class="ap-input" placeholder="02" />
+            <input id="apN3" type="number" min="1" max="60" class="ap-input" placeholder="03" />
+            <input id="apN4" type="number" min="1" max="60" class="ap-input" placeholder="04" />
+            <input id="apN5" type="number" min="1" max="60" class="ap-input" placeholder="05" />
+            <input id="apN6" type="number" min="1" max="60" class="ap-input" placeholder="06" />
+          </div>
+          <div class="btnr">
+            <button class="btn btng" onclick="registerBet()">&#128221; Registrar Aposta</button>
+            <button class="btn btnb" onclick="quickBet()">&#127922; Aposta Rápida</button>
+          </div>
+        </div>
+
+        <!-- Lista de apostas -->
+        <div id="apList"></div>
+
+        <div id="apEmpty" style="text-align:center;padding:40px;color:var(--muted);font-size:13px">
+          <div style="font-size:40px;margin-bottom:12px">&#127915;</div>
+          <div>Nenhuma aposta registrada ainda</div>
+          <div style="font-size:11px;margin-top:6px;color:var(--dim)">Use o formulário acima para registrar suas apostas</div>
+        </div>
+      </div>
+
+      <!-- ══════════ ANÁLISE PROFUNDA ══════════ -->
+      <div class="pane" id="tab-deep">
+        <div class="g4" style="margin-bottom: 20px">
+          <div class="card" style="background: var(--bg3)">
+            <div class="ct">Mais sorteado (histórico)</div>
+            <div class="cv" id="apMost" style="color: var(--orange)">—</div>
+            <div class="cs" id="apMostC">—</div>
+          </div>
+          <div class="card" style="background: var(--bg3)">
+            <div class="ct">Mais atrasado</div>
+            <div class="cv" id="apLate" style="color: var(--blue)">—</div>
+            <div class="cs" id="apLateC">—</div>
+          </div>
+          <div class="card" style="background: var(--bg3)">
+            <div class="ct">Soma média histórica</div>
+            <div class="cv" id="apAvg" style="color: var(--cyan)">—</div>
+            <div class="cs">Ideal: 150–210</div>
+          </div>
+          <div class="card" style="background: var(--bg3)">
+            <div class="ct">Máx. consecutivos já vistos</div>
+            <div class="cv" id="apConsec" style="color: var(--purple)">—</div>
+            <div class="cs">Em um único sorteio</div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom: 20px">
+          <div class="sec">
+            Distribuição das somas — todos os sorteios (verde = faixa ideal)
+          </div>
+          <div class="cw" style="height: 220px">
+            <canvas id="cSumDist"></canvas>
+          </div>
+        </div>
+        <div class="g2" style="margin-bottom: 20px">
+          <div class="card">
+            <div class="sec">Distribuição pares × ímpares</div>
+            <div class="cw" style="height: 180px">
+              <canvas id="cParity"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="sec">Frequência por dezena (01–60)</div>
+            <div class="cw" style="height: 180px">
+              <canvas id="cDecade"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sec">Tabela completa — todos os 60 números</div>
+          <div style="overflow-x: auto">
+            <table
+              id="freqTbl"
+              style="
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 11px;
+                font-family: var(--mono);
+              "
+            >
+              <thead>
+                <tr
+                  style="
+                    border-bottom: 1px solid var(--border2);
+                    color: var(--muted);
+                  "
+                >
+                  <th style="padding: 8px; text-align: left">Nº</th>
+                  <th style="padding: 8px; text-align: right">Freq.</th>
+                  <th style="padding: 8px; text-align: right">% do total</th>
+                  <th style="padding: 8px; text-align: right">
+                    Último sorteio
+                  </th>
+                  <th style="padding: 8px; text-align: right">Atraso</th>
+                  <th style="padding: 8px; text-align: left">Status</th>
+                </tr>
+              </thead>
+              <tbody id="freqBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ HISTÓRICO ══════════ -->
+      <div class="pane" id="tab-hist">
+        <div class="card">
+          <div
+            class="sec"
+            style="
+              justify-content: space-between;
+              display: flex;
+              align-items: center;
+            "
+          >
+            <span>Histórico completo de resultados</span
+            ><span
+              id="hCount"
+              style="
+                font-size: 11px;
+                color: var(--muted);
+                font-family: var(--mono);
+              "
+            ></span>
+          </div>
+          <div
+            style="
+              display: flex;
+              gap: 10px;
+              margin-bottom: 14px;
+              flex-wrap: wrap;
+            "
+          >
+            <input
+              id="hSrch"
+              placeholder="Buscar concurso ou número..."
+              oninput="filterH()"
+              style="
+                flex: 1;
+                min-width: 160px;
+                background: var(--bg3);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 8px 12px;
+                color: var(--text);
+                font-size: 12px;
+                outline: none;
+                font-family: var(--mono);
+              "
+            />
+            <select
+              id="hFilt"
+              onchange="filterH()"
+              style="
+                background: var(--bg3);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 8px 12px;
+                color: var(--text);
+                font-size: 12px;
+                outline: none;
+              "
+            >
+              <option value="all">Todos</option>
+              <option value="acc">Acumulados</option>
+              <option value="win">Com ganhador</option>
+            </select>
+          </div>
+          <div id="hList"></div>
+          <div id="hLoadMore" style="text-align:center;padding:16px;display:none">
+            <button class="btn btno" onclick="loadMoreHist()">Carregar mais resultados...</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /wrap -->
+    <div id="toast"></div>
+
+    <script>
+      const SRV = () => {
+        const p = window.location.port;
+        return p && p !== "3000" ? "http://localhost:3000" : "";
+      };
+      const SERVER_URL = SRV();
+      const BC = [
+        "#10b981",
+        "#3b82f6",
+        "#f97316",
+        "#8b5cf6",
+        "#ec4899",
+        "#f59e0b",
+      ];
+      const DC = [
+        "#3b82f6",
+        "#10b981",
+        "#f97316",
+        "#8b5cf6",
+        "#ec4899",
+        "#f59e0b",
+      ];
+      let cFreq, cSum, cEven, cSumDist, cParity, cDecade, cMJComp;
+      let CUR = null,
+        ALL = [];
+      const fmt = (n) => String(n).padStart(2, "0");
+
+      // ── localStorage keys ──
+      const LS_MJ = "megasena_meus_jogos";
+      const LS_AP = "megasena_apostas";
+
+      // ── TABS ──
+      function showTab(id, el) {
+        document
+          .querySelectorAll(".pane")
+          .forEach((p) => p.classList.remove("a"));
+        document
+          .querySelectorAll(".ntab")
+          .forEach((t) => t.classList.remove("a"));
+        document.getElementById("tab-" + id).classList.add("a");
+        el.classList.add("a");
+      }
+
+      // ── NEXT DRAW ──
+      const DDAYS = [2, 4, 6];
+      function nextDraw(lc) {
+        const now = new Date();
+        const brt = new Date(
+          now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
+        );
+        const h = brt.getHours(),
+          d = brt.getDay();
+        let c = new Date(brt);
+        c.setHours(21, 0, 0, 0);
+        if (!DDAYS.includes(d) || h >= 21) {
+          do {
+            c.setDate(c.getDate() + 1);
+          } while (!DDAYS.includes(c.getDay()));
+          c.setHours(21, 0, 0, 0);
+        }
+        const FDN = [
+          "domingo",
+          "segunda",
+          "terça-feira",
+          "quarta",
+          "quinta-feira",
+          "sexta",
+          "sábado",
+        ];
+        const MN = [
+          "jan",
+          "fev",
+          "mar",
+          "abr",
+          "mai",
+          "jun",
+          "jul",
+          "ago",
+          "set",
+          "out",
+          "nov",
+          "dez",
+        ];
+        const diff = c - brt,
+          dH = Math.floor(diff / 3600000),
+          dM = Math.floor((diff % 3600000) / 60000);
+        const cd =
+          dH < 1
+            ? `Em ${dM}min`
+            : dH < 24
+              ? `Em ${dH}h${dM}min`
+              : `Em ${Math.floor(dH / 24)}d ${dH % 24}h`;
+        const num =
+          Number.isFinite(Number(lc)) && lc > 0 ? Number(lc) + 1 : "—";
+        return {
+          num,
+          date: `${FDN[c.getDay()]}, ${c.getDate()} de ${MN[c.getMonth()]} de ${c.getFullYear()} — 21h`,
+          cd,
+        };
+      }
+
+      // ── RENDER ALL ──
+      // ── Formatação de dinheiro (compacta: R$ 1,2 mi / R$ 340 mil) ──
+      function brl(v) {
+        v = Number(v) || 0;
+        if (v >= 1e9) return `R$ ${(v / 1e9).toFixed(2)} bi`;
+        if (v >= 1e6) return `R$ ${(v / 1e6).toFixed(2)} mi`;
+        if (v >= 1e3) return `R$ ${(v / 1e3).toFixed(0)} mil`;
+        return `R$ ${v.toLocaleString("pt-BR")}`;
+      }
+      const nf = (n) => Number(n || 0).toLocaleString("pt-BR");
+
+      // ── Ganhadores, valores e probabilidade ──
+      function renderWinners(stats) {
+        if (!stats || stats.winningDrawsCount == null) return;
+
+        // KPIs
+        const bp = stats.biggestPrize;
+        const kpis = [
+          {
+            t: "Sorteios com ganhador",
+            v: nf(stats.winningDrawsCount),
+            s: `${stats.winRatePct}% de ${nf(stats.total)} · ${nf(stats.totalSenaGanhadores)} ganhadores`,
+            c: "var(--green)",
+          },
+          {
+            t: "Total pago na sena",
+            v: brl(stats.totalSenaPaid),
+            s: `média de ${brl(stats.avgSenaPrize)} por sorteio premiado`,
+            c: "var(--gold)",
+          },
+          {
+            t: "Maior prêmio individual",
+            v: bp ? brl(bp.premio) : "—",
+            s: bp ? `#${bp.concurso} · ${bp.data} · ${nf(bp.ganhadores)} ganh.` : "",
+            c: "var(--orange)",
+          },
+          {
+            t: "Prêmio estimado (próximo)",
+            v: stats.jackpot?.estimativaProx
+              ? brl(stats.jackpot.estimativaProx)
+              : stats.jackpot?.acumuladoProx
+                ? brl(stats.jackpot.acumuladoProx)
+                : "—",
+            s: stats.jackpot?.acumuladoProx
+              ? `acumulado: ${brl(stats.jackpot.acumuladoProx)}`
+              : "rode fetch-history --enrich p/ dados",
+            c: "var(--cyan)",
+          },
+        ];
+        document.getElementById("winKpis").innerHTML = kpis
+          .map(
+            (k) => `<div class="card" style="padding:14px">
+              <div class="ct">${k.t}</div>
+              <div class="cv" style="font-size:20px;color:${k.c}">${k.v}</div>
+              <div class="cs">${k.s}</div>
+            </div>`,
+          )
+          .join("");
+
+        // Preenche o "Prêmio estimado" do card Próximo sorteio, se houver dado real
+        const est = stats.jackpot?.estimativaProx || stats.jackpot?.acumuladoProx;
+        if (est) {
+          const el = document.getElementById("dPrize");
+          if (el) el.textContent = `Prêmio estimado: ${brl(est)}`;
+        }
+
+        // Números da sorte (mais presentes em jogos premiados)
+        const lucky = stats.luckyNumbers || [];
+        const maxWins = Math.max(1, ...lucky.map((x) => x.wins));
+        document.getElementById("luckyNums").innerHTML = lucky
+          .map((x) => {
+            const w = Math.round((x.wins / maxWins) * 100);
+            return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <div style="width:34px;height:34px;flex:none;border-radius:50%;background:var(--green);color:#04110b;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">${fmt(x.n)}</div>
+              <div style="flex:1;min-width:0">
+                <div style="height:8px;background:var(--dim);border-radius:4px;overflow:hidden">
+                  <div style="height:100%;width:${w}%;background:linear-gradient(90deg,var(--green),var(--gold))"></div>
+                </div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">${x.wins}× premiado · ${x.probPct}% de sair · ${brl(x.value)}</div>
+              </div>
+            </div>`;
+          })
+          .join("");
+
+        // Cidades mais premiadas
+        const cities = stats.topCities || [];
+        document.getElementById("topCities").innerHTML = cities.length
+          ? cities
+              .map(
+                (c, i) =>
+                  `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--dim);font-size:12px">
+                    <span>${i + 1}. ${c.city}</span>
+                    <b style="color:var(--gold)">${nf(c.count)} ganh.</b>
+                  </div>`,
+              )
+              .join("")
+          : `<div style="font-size:12px;color:var(--muted);font-style:italic">Sem dados de cidade. Rode <code>node fetch-history.js --enrich</code>.</div>`;
+
+        // Odds por tipo de aposta
+        document.getElementById("betOdds").innerHTML = (stats.betOdds || [])
+          .map(
+            (b) =>
+              `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--dim);font-size:12px">
+                <span>${b.dezenas} dezenas <span style="color:var(--muted)">(${nf(b.apostas)} jogos)</span></span>
+                <b style="color:var(--orange)">1 : ${nf(b.odds)}</b>
+              </div>`,
+          )
+          .join("");
+      }
+
+      function renderAll(data) {
+        CUR = data;
+        ALL = data.results;
+        const { stats, results, lastUpdated, lastConcurso } = data;
+        const lc =
+          Number.isFinite(Number(lastConcurso)) && lastConcurso > 0
+            ? Number(lastConcurso)
+            : results[0]?.concurso || 0;
+        document.getElementById("kT").textContent =
+          stats.total.toLocaleString("pt-BR");
+        document.getElementById("kP").textContent = stats.firstConcurso
+          ? `#${stats.firstConcurso} (${stats.firstData}) → #${lc}`
+          : "Carregado";
+        // Note about stats range
+        document.getElementById("kNote").textContent =
+          `Estatísticas calculadas sobre ${stats.total.toLocaleString("pt-BR")} concursos (desde 1996)`;
+        document.getElementById("kA").textContent = stats.accumulated;
+        document.getElementById("kAp").textContent =
+          `${Math.round((stats.accumulated / stats.total) * 100)}% dos sorteios`;
+        document.getElementById("pE").textContent =
+          `${stats.evenAvg.toFixed(1)}×${(6 - stats.evenAvg).toFixed(1)}`;
+        document.getElementById("pH").textContent =
+          `${(6 - stats.highAvg).toFixed(1)}×${stats.highAvg.toFixed(1)}`;
+        document.getElementById("pMn").textContent = stats.sumMin;
+        document.getElementById("pMx").textContent = stats.sumMax;
+        document.getElementById("mjTotal").textContent =
+          stats.total.toLocaleString("pt-BR");
+        startCD(lc);
+        renderSugs(stats, results, lc);
+        renderHmap(stats.freq, stats.maxFreq, stats.minFreq);
+        renderBars("top10", stats.top10, stats.freq, stats.maxFreq, "#f97316");
+        renderBars("bot10", stats.bot10, stats.freq, stats.maxFreq, "#3b82f6");
+        document.getElementById("decs").innerHTML = "";
+        renderDecs(stats.decadeFreq);
+        renderCharts(data);
+        renderWinners(stats);
+        renderDeep(stats, results);
+        renderHist(results);
+        renderApostasUI();
+        const dt = new Date(lastUpdated);
+        document.getElementById("uptime").textContent =
+          `${dt.toLocaleString("pt-BR")} · ${stats.total} concursos`;
+      }
+
+      // ── COUNTDOWN ──
+      let cdT = null;
+      function startCD(lc) {
+        if (cdT) clearInterval(cdT);
+        const upd = () => {
+          const { num, date, cd } = nextDraw(lc);
+          document.getElementById("kN").textContent = `#${num}`;
+          document.getElementById("dD").textContent = date;
+          document.getElementById("dC").textContent = `⏱ ${cd}`;
+          document.getElementById("sLbl").textContent =
+            `Concurso #${num} · ${date}`;
+        };
+        upd();
+        cdT = setInterval(upd, 30000);
+      }
+
+      // ── SUGGESTIONS ──
+      function genSugs(stats, results) {
+        const N = results.length;
+        if (!N) return [];
+        const freq = [0, ...stats.freq],
+          ls = [999, ...stats.lastSeen],
+          maxF = stats.maxFreq,
+          minF = stats.minFreq;
+        const sf = (n) => freq[n] / maxF,
+          sl = (n) => ls[n] / N;
+        function score(nums) {
+          const s = nums.reduce((a, b) => a + b, 0);
+          const sumOk =
+            s >= 150 && s <= 210 ? 1 : s >= 130 && s <= 230 ? 0.7 : 0.3;
+          const ev = nums.filter((n) => n % 2 === 0).length;
+          const evOk = ev >= 2 && ev <= 4 ? 1 : 0.5;
+          const dec = [0, 0, 0, 0, 0, 0];
+          nums.forEach((n) => dec[Math.floor((n - 1) / 10)]++);
+          const sp = dec.filter((d) => d > 0).length;
+          const spOk = sp >= 4 ? 1 : sp / 4;
+          const fS = nums.reduce((a, n) => a + sf(n), 0) / 6;
+          const lS = nums.reduce((a, n) => a + sl(n), 0) / 6;
+          const sorted = [...nums].sort((a, b) => a - b);
+          let mxC = 1,
+            cu = 1;
+          for (let i = 1; i < sorted.length; i++) {
+            sorted[i] === sorted[i - 1] + 1 ? cu++ : (cu = 1);
+            mxC = Math.max(mxC, cu);
+          }
+          const seqOk =
+            mxC <= 2 ? 1 : mxC === 3 ? 0.75 : mxC === 4 ? 0.5 : 0.25;
+          return Math.round(
+            (sumOk * 0.25 +
+              evOk * 0.18 +
+              spOk * 0.18 +
+              fS * 0.15 +
+              lS * 0.14 +
+              seqOk * 0.1) *
+              100,
+          );
+        }
+        function pick(fn, evT) {
+          const cds = Array.from({ length: 60 }, (_, i) => i + 1)
+            .map((n) => ({ n, s: fn(n) }))
+            .sort((a, b) => b.s - a.s);
+          const p = [],
+            dec = [0, 0, 0, 0, 0, 0];
+          let ev = 0;
+          for (const c of cds) {
+            if (p.length >= 6) break;
+            const d = Math.floor((c.n - 1) / 10),
+              ie = c.n % 2 === 0;
+            if (dec[d] >= 2) continue;
+            if (ev >= evT + 1 && ie) continue;
+            if (p.length - ev >= 6 - evT + 1 && !ie) continue;
+            p.push(c.n);
+            dec[d]++;
+            if (ie) ev++;
+          }
+          return p.sort((a, b) => a - b);
+        }
+        const s1 = pick((n) => sf(n) * 0.5 + sl(n) * 0.5, 3);
+        const s2 = pick((n) => sf(n) * 0.8 + sl(n) * 0.2, 4);
+        const s3 = pick((n) => sf(n) * 0.1 + sl(n) * 0.9, 3);
+        return [
+          {
+            nums: s1,
+            score: score(s1),
+            strat: "Balanceada (frequência + atraso)",
+            color: "#10b981",
+          },
+          {
+            nums: s2,
+            score: score(s2),
+            strat: "Focada nos mais sorteados (quentes)",
+            color: "#f97316",
+          },
+          {
+            nums: s3,
+            score: score(s3),
+            strat: "Focada nos mais atrasados (frios)",
+            color: "#3b82f6",
+          },
+        ].sort((a, b) => b.score - a.score);
+      }
+      function renderSugs(stats, results, lc) {
+        const sugs = genSugs(stats, results);
+        const sc = ["s1", "s2", "s3"],
+          bc = ["b1", "b2", "b3"],
+          lb = ["🥇 Mais provável", "🥈 2ª opção", "🥉 3ª opção"];
+        document.getElementById("sCds").innerHTML = sugs
+          .map((s, i) => {
+            const sum = s.nums.reduce((a, b) => a + b, 0),
+              ev = s.nums.filter((n) => n % 2 === 0).length,
+              lw = s.nums.filter((n) => n <= 30).length;
+            const balls = s.nums
+              .map(
+                (n, idx) =>
+                  `<div class="ball" style="background:${BC[idx]}">${fmt(n)}</div>`,
+              )
+              .join("");
+            return `<div class="sc ${sc[i]}">
+      <div class="sbadge ${bc[i]}">${lb[i]}</div>
+      <div class="sstrat">${s.strat}</div>
+      <div class="sballs">${balls}</div>
+      <div class="srow"><span>Score estatístico</span><span style="color:${s.color};font-weight:800;font-family:var(--mono)">${s.score}/100</span></div>
+      <div class="strk"><div class="sfil" style="width:${s.score}%;background:${s.color}"></div></div>
+      <div class="tags">
+        <span class="tag tg">Soma: ${sum}</span>
+        <span class="tag tb">P:${ev}/I:${6 - ev}</span>
+        <span class="tag to">B:${lw}/A:${6 - lw}</span>
+        <span class="tag tp">${s.nums.map(fmt).join("·")}</span>
+      </div>
+    </div>`;
+          })
+          .join("");
+      }
+
+      // ── HEATMAP ──
+      function hC(r) {
+        if (r > 0.75) return { bg: "#f97316", fg: "#fff" };
+        if (r > 0.5) return { bg: "#f59e0b", fg: "#0a0a0a" };
+        if (r > 0.25) return { bg: "#10b981", fg: "#fff" };
+        return { bg: "#3b82f6", fg: "#fff" };
+      }
+      function renderHmap(freq, maxF, minF) {
+        const el = document.getElementById("hmap");
+        el.innerHTML = "";
+        for (let n = 1; n <= 60; n++) {
+          const r = (freq[n - 1] - minF) / (maxF - minF);
+          const { bg, fg } = hC(r);
+          const c = document.createElement("div");
+          c.className = "hc";
+          c.style.background = bg;
+          c.style.color = fg;
+          c.textContent = fmt(n);
+          c.setAttribute("data-tip", `#${fmt(n)}: ${freq[n - 1]}×`);
+          el.appendChild(c);
+        }
+      }
+      function renderBars(id, nums, freq, maxF, color) {
+        document.getElementById(id).innerHTML = nums
+          .map(
+            (n) => `
+    <div class="br">
+      <div class="bn" style="background:${color}22;color:${color};border:1px solid ${color}44">${fmt(n)}</div>
+      <div class="bt"><div class="bf" style="width:${Math.round((freq[n - 1] / maxF) * 100)}%;background:${color}"></div></div>
+      <div class="bv">${freq[n - 1]}×</div>
+    </div>`,
+          )
+          .join("");
+      }
+      function renderDecs(df) {
+        const max = Math.max(...df);
+        ["01–10", "11–20", "21–30", "31–40", "41–50", "51–60"].forEach(
+          (l, i) => {
+            const pct = Math.round((df[i] / max) * 100);
+            document.getElementById("decs").innerHTML +=
+              `<div class="dr"><div class="dl">${l}</div><div class="dt"><div class="df" style="width:${pct}%;background:${DC[i]}">${df[i]}</div></div></div>`;
+          },
+        );
+      }
+
+      // ── CHARTS ──
+      function renderCharts(data) {
+        const { stats, results } = data;
+        const labs = Array.from({ length: 60 }, (_, i) => i + 1);
+        const bcs = labs.map((i) => {
+          const r =
+            (stats.freq[i - 1] - stats.minFreq) /
+            (stats.maxFreq - stats.minFreq);
+          return r > 0.75
+            ? "#f97316"
+            : r > 0.5
+              ? "#f59e0b"
+              : r > 0.25
+                ? "#10b981"
+                : "#3b82f6";
+        });
+        if (cFreq) cFreq.destroy();
+        cFreq = new Chart(document.getElementById("cFreq"), {
+          type: "bar",
+          data: {
+            labels: labs,
+            datasets: [
+              {
+                data: stats.freq,
+                backgroundColor: bcs,
+                borderWidth: 0,
+                borderRadius: 3,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: (c) => `Número ${fmt(c[0].label)}`,
+                  label: (c) => `${c.raw}× sorteado`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                ticks: { color: "#64748b", font: { size: 9 }, maxRotation: 0 },
+                grid: { color: "rgba(255,255,255,.03)" },
+              },
+              y: {
+                ticks: { color: "#64748b", font: { size: 10 } },
+                grid: { color: "rgba(255,255,255,.05)" },
+              },
+            },
+          },
+        });
+        const s40 = results
+          .slice(0, 40)
+          .map((r) => r.dezenas.reduce((a, b) => a + b, 0))
+          .reverse();
+        const l40 = results
+          .slice(0, 40)
+          .map((r) => `#${r.concurso}`)
+          .reverse();
+        if (cSum) cSum.destroy();
+        cSum = new Chart(document.getElementById("cSum"), {
+          type: "line",
+          data: {
+            labels: l40,
+            datasets: [
+              {
+                data: s40,
+                fill: false,
+                borderColor: "#10b981",
+                backgroundColor: "transparent",
+                pointBackgroundColor: s40.map((s) =>
+                  s >= 150 && s <= 210 ? "#10b981" : "#f97316",
+                ),
+                pointRadius: 4,
+                tension: 0.3,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: (c) => `Soma: ${c.raw}` } },
+            },
+            scales: {
+              x: {
+                ticks: {
+                  color: "#64748b",
+                  font: { size: 9 },
+                  maxRotation: 45,
+                  maxTicksLimit: 10,
+                },
+                grid: { color: "rgba(255,255,255,.03)" },
+              },
+              y: {
+                ticks: { color: "#64748b", font: { size: 10 } },
+                grid: { color: "rgba(255,255,255,.05)" },
+                min: Math.min(...s40) - 10,
+                max: Math.max(...s40) + 10,
+              },
+            },
+          },
+        });
+        const ec = [0, 0, 0, 0, 0, 0, 0];
+        results.forEach((r) => {
+          ec[r.dezenas.filter((n) => n % 2 === 0).length]++;
+        });
+        if (cEven) cEven.destroy();
+        cEven = new Chart(document.getElementById("cEven"), {
+          type: "bar",
+          data: {
+            labels: ["0P", "1P", "2P", "3P", "4P", "5P", "6P"],
+            datasets: [
+              {
+                data: ec,
+                backgroundColor: BC,
+                borderWidth: 0,
+                borderRadius: 4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: (c) => `${c[0].label} pares`,
+                  label: (c) => `${c.raw} sorteios`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                ticks: { color: "#64748b", font: { size: 11 } },
+                grid: { display: false },
+              },
+              y: {
+                ticks: { color: "#64748b", font: { size: 10 } },
+                grid: { color: "rgba(255,255,255,.05)" },
+              },
+            },
+          },
+        });
+      }
+
+      // ── DEEP ANALYSIS ──
+      function renderDeep(stats, results) {
+        const N = results.length;
+        const freq = stats.freq,
+          ls = stats.lastSeen,
+          maxF = stats.maxFreq,
+          minF = stats.minFreq;
+        const topN = freq.indexOf(Math.max(...freq)) + 1;
+        const lateN = ls.indexOf(Math.min(...ls)) + 1;
+        const sums = results.map((r) => r.dezenas.reduce((a, b) => a + b, 0));
+        const avgS = Math.round(sums.reduce((a, b) => a + b, 0) / N);
+        let mxC = 0;
+        results.forEach((r) => {
+          const s = [...r.dezenas].sort((a, b) => a - b);
+          let cu = 1,
+            mx = 1;
+          for (let i = 1; i < s.length; i++) {
+            s[i] === s[i - 1] + 1 ? cu++ : (cu = 1);
+            mx = Math.max(mx, cu);
+          }
+          mxC = Math.max(mxC, mx);
+        });
+        document.getElementById("apMost").textContent = fmt(topN);
+        document.getElementById("apMostC").textContent =
+          `${freq[topN - 1]}× sorteado`;
+        document.getElementById("apLate").textContent = fmt(lateN);
+        document.getElementById("apLateC").textContent =
+          `Há ${ls[lateN - 1]} sorteios sem sair`;
+        document.getElementById("apAvg").textContent = avgS;
+        document.getElementById("apConsec").textContent = mxC;
+        // Soma dist
+        const smn = Math.min(...sums),
+          smx = Math.max(...sums);
+        const bsz = Math.max(1, Math.ceil((smx - smn) / 40));
+        const bCnt = Math.ceil((smx - smn) / bsz);
+        const bkts = new Array(bCnt).fill(0);
+        sums.forEach((s) => {
+          const b = Math.min(Math.floor((s - smn) / bsz), bCnt - 1);
+          bkts[b]++;
+        });
+        const slabs = Array.from({ length: bCnt }, (_, i) => smn + i * bsz);
+        if (cSumDist) cSumDist.destroy();
+        cSumDist = new Chart(document.getElementById("cSumDist"), {
+          type: "bar",
+          data: {
+            labels: slabs.map((l) => l + ""),
+            datasets: [
+              {
+                data: bkts,
+                backgroundColor: slabs.map((l) =>
+                  l >= 150 && l <= 210
+                    ? "rgba(16,185,129,.7)"
+                    : "rgba(59,130,246,.3)",
+                ),
+                borderWidth: 0,
+                borderRadius: 3,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: (c) => `Soma ~${c[0].label}–${+c[0].label + bsz}`,
+                  label: (c) => `${c.raw} sorteios`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                ticks: {
+                  color: "#64748b",
+                  font: { size: 9 },
+                  maxTicksLimit: 20,
+                },
+                grid: { color: "rgba(255,255,255,.03)" },
+              },
+              y: {
+                ticks: { color: "#64748b", font: { size: 10 } },
+                grid: { color: "rgba(255,255,255,.05)" },
+              },
+            },
+          },
+        });
+        const pc = [0, 0, 0, 0, 0, 0, 0];
+        results.forEach((r) => {
+          pc[r.dezenas.filter((n) => n % 2 === 0).length]++;
+        });
+        if (cParity) cParity.destroy();
+        cParity = new Chart(document.getElementById("cParity"), {
+          type: "doughnut",
+          data: {
+            labels: ["0P", "1P", "2P", "3P", "4P", "5P", "6P"],
+            datasets: [{ data: pc, backgroundColor: BC, borderWidth: 0 }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "right",
+                labels: { color: "#94a3b8", font: { size: 11 } },
+              },
+            },
+          },
+        });
+        if (cDecade) cDecade.destroy();
+        cDecade = new Chart(document.getElementById("cDecade"), {
+          type: "bar",
+          data: {
+            labels: ["01–10", "11–20", "21–30", "31–40", "41–50", "51–60"],
+            datasets: [
+              {
+                data: stats.decadeFreq,
+                backgroundColor: DC,
+                borderWidth: 0,
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                ticks: { color: "#64748b", font: { size: 11 } },
+                grid: { display: false },
+              },
+              y: {
+                ticks: { color: "#64748b", font: { size: 10 } },
+                grid: { color: "rgba(255,255,255,.05)" },
+              },
+            },
+          },
+        });
+        // Table
+        const tbody = document.getElementById("freqBody");
+        tbody.innerHTML = "";
+        [...freq.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .forEach(([idx, f]) => {
+            const n = idx + 1,
+              lsv = ls[idx];
+            const pct = ((f / N) * 100).toFixed(2);
+            const st =
+              lsv <= 5
+                ? "🔥 Quente"
+                : lsv <= 15
+                  ? "✅ Normal"
+                  : lsv <= 30
+                    ? "❄️ Frio"
+                    : "🧊 Muito frio";
+            const sc2 =
+              lsv <= 5
+                ? "color:#f97316"
+                : lsv <= 15
+                  ? "color:#10b981"
+                  : lsv <= 30
+                    ? "color:#3b82f6"
+                    : "color:#8b5cf6";
+            tbody.innerHTML += `<tr style="border-bottom:1px solid var(--border2)">
+      <td style="padding:7px 8px;font-weight:700;color:${DC[Math.floor((n - 1) / 10)]}">${fmt(n)}</td>
+      <td style="padding:7px 8px;text-align:right">${f}</td>
+      <td style="padding:7px 8px;text-align:right;color:var(--muted)">${pct}%</td>
+      <td style="padding:7px 8px;text-align:right;color:var(--muted)">${lsv === 999 ? "Nunca" : "#" + (ALL[lsv]?.concurso || "?")}</td>
+      <td style="padding:7px 8px;text-align:right;color:var(--muted)">${lsv === 999 ? N : lsv} sorteios</td>
+      <td style="padding:7px 8px;${sc2}">${st}</td>
+    </tr>`;
+          });
+      }
+
+      // ── HISTORY WITH PAGINATION ──
+      let histPage = 0;
+      const HIST_PAGE_SIZE = 50;
+      let filteredHist = [];
+
+      function renderHistRows(results, append) {
+        const container = document.getElementById("hList");
+        if (!append) container.innerHTML = "";
+        const start = append ? histPage * HIST_PAGE_SIZE : 0;
+        const end = start + HIST_PAGE_SIZE;
+        const slice = results.slice(start, end);
+        let html = "";
+        slice.forEach((r, idx) => {
+          const i = start + idx;
+          const bdg = r.acumulado
+            ? `<span class="hbdg ba">Acumulou</span>`
+            : `<span class="hbdg bw">${r.ganhadores} ganh.</span>`;
+          const balls = r.dezenas
+            .map(
+              (n, j) =>
+                `<div class="ball ball-xs" style="background:${BC[j % 6]}">${fmt(n)}</div>`,
+            )
+            .join("");
+          html += `<div class="hr"><div class="hn">#${r.concurso}${i === 0 && r._isNew ? '<span class="nbdg">NOVO</span>' : ""}</div><div class="hd">${r.data}</div><div class="hb2">${balls}</div>${bdg}</div>`;
+        });
+        container.innerHTML += html;
+        // Show/hide load more
+        const loadMoreBtn = document.getElementById("hLoadMore");
+        if (end < results.length) {
+          loadMoreBtn.style.display = "block";
+        } else {
+          loadMoreBtn.style.display = "none";
+        }
+      }
+
+      function renderHist(results) {
+        histPage = 0;
+        filteredHist = results;
+        document.getElementById("hCount").textContent =
+          `${results.length} concursos`;
+        renderHistRows(results, false);
+      }
+
+      function loadMoreHist() {
+        histPage++;
+        renderHistRows(filteredHist, true);
+      }
+
+      function filterH() {
+        if (!ALL.length) return;
+        const q = document.getElementById("hSrch").value.toLowerCase();
+        const f = document.getElementById("hFilt").value;
+        let r = [...ALL];
+        if (f === "acc") r = r.filter((x) => x.acumulado);
+        if (f === "win") r = r.filter((x) => !x.acumulado);
+        if (q)
+          r = r.filter(
+            (x) =>
+              String(x.concurso).includes(q) ||
+              x.dezenas.some((n) => String(n).includes(q)),
+          );
+        document.getElementById("hCount").textContent =
+          `${r.length} de ${ALL.length}`;
+        histPage = 0;
+        filteredHist = r;
+        renderHistRows(r, false);
+      }
+
+      // ═══════ MEUS JOGOS ═══════
+      let MJG = [Array(6).fill("")];
+
+      function loadMJFromStorage() {
+        try {
+          const stored = localStorage.getItem(LS_MJ);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              MJG = parsed;
+            }
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      function saveMJToStorage() {
+        try {
+          localStorage.setItem(LS_MJ, JSON.stringify(MJG));
+        } catch (e) { /* ignore */ }
+      }
+
+      function renderMJInputs() {
+        document.getElementById("mjList").innerHTML = MJG.map((g, gi) => {
+          const ins = Array.from(
+            { length: 6 },
+            (_, ni) =>
+              `<input class="mjin${g[ni] ? " ok" : ""}${g[ni] === false ? " er" : ""}" type="number" min="1" max="60" value="${g[ni] || ""}" placeholder="${ni + 1}" onchange="mjCh(${gi},${ni},this)" oninput="mjCh(${gi},${ni},this)" onkeydown="mjKN(event,${gi},${ni})" id="mji${gi}${ni}"/>`,
+          ).join("");
+          return `<div class="mjgr"><div class="mjgn">Jogo ${gi + 1}</div><div class="mjins">${ins}</div>${MJG.length > 1 ? `<button class="mjrm" onclick="remMJ(${gi})">✕</button>` : ""}</div>`;
+        }).join("");
+      }
+      function mjCh(gi, ni, el) {
+        const v = parseInt(el.value);
+        if (!el.value) {
+          el.className = "mjin";
+          MJG[gi][ni] = "";
+          saveMJToStorage();
+          return;
+        }
+        if (isNaN(v) || v < 1 || v > 60) {
+          el.className = "mjin er";
+          MJG[gi][ni] = null;
+          saveMJToStorage();
+          return;
+        }
+        MJG[gi][ni] = v;
+        el.className = "mjin ok";
+        saveMJToStorage();
+        if (ni < 5 && el.value.length >= 2) {
+          const nx = document.getElementById(`mji${gi}${ni + 1}`);
+          if (nx) nx.focus();
+        }
+      }
+      function mjKN(e, gi, ni) {
+        if (e.key === "Tab" || e.key === "Enter") {
+          e.preventDefault();
+          const nx =
+            ni < 5
+              ? document.getElementById(`mji${gi}${ni + 1}`)
+              : gi < MJG.length - 1
+                ? document.getElementById(`mji${gi + 1}0`)
+                : null;
+          if (nx) nx.focus();
+        }
+      }
+      function addMJRow() {
+        if (MJG.length >= 10) {
+          showToast("⚠️ Máximo 10 jogos");
+          return;
+        }
+        MJG.push(Array(6).fill(""));
+        saveMJToStorage();
+        renderMJInputs();
+      }
+      function remMJ(i) {
+        MJG.splice(i, 1);
+        saveMJToStorage();
+        renderMJInputs();
+      }
+      function clearMJ() {
+        MJG = [Array(6).fill("")];
+        saveMJToStorage();
+        renderMJInputs();
+        document.getElementById("mjOut").style.display = "none";
+        document.getElementById("mjEmpty").style.display = "block";
+      }
+      function randomMJ() {
+        MJG = MJG.map(() => {
+          const s = new Set();
+          while (s.size < 6) s.add(Math.floor(Math.random() * 60) + 1);
+          return [...s].sort((a, b) => a - b);
+        });
+        saveMJToStorage();
+        renderMJInputs();
+        MJG.forEach((g, gi) =>
+          g.forEach((v, ni) => {
+            const el = document.getElementById(`mji${gi}${ni}`);
+            if (el) {
+              el.value = v;
+              el.className = "mjin ok";
+            }
+          }),
+        );
+      }
+
+      function analyzeMJ() {
+        if (!CUR) {
+          showToast("⚠️ Aguarde os dados carregarem!");
+          return;
+        }
+        const { stats, results } = CUR;
+        const N = results.length;
+        if (!N) {
+          showToast("⚠️ Sem dados históricos!");
+          return;
+        }
+        // Lê inputs
+        MJG = MJG.map((g, gi) =>
+          Array.from({ length: 6 }, (_, ni) => {
+            const el = document.getElementById(`mji${gi}${ni}`);
+            const v = parseInt(el?.value);
+            return el && !isNaN(v) && v >= 1 && v <= 60 ? v : "";
+          }),
+        );
+        saveMJToStorage();
+        const valid = MJG.map((g, i) => ({
+          i,
+          nums: g.filter((n) => n && n >= 1 && n <= 60),
+        })).filter((j) => j.nums.length === 6);
+        if (!valid.length) {
+          showToast("⚠️ Preencha pelo menos 1 jogo completo!");
+          return;
+        }
+
+        const freq = [0, ...stats.freq],
+          ls = [999, ...stats.lastSeen],
+          maxF = stats.maxFreq,
+          minF = stats.minFreq;
+
+        function anal(nums) {
+          const s = [...nums].sort((a, b) => a - b);
+          const sum = s.reduce((a, b) => a + b, 0);
+          const ev = s.filter((n) => n % 2 === 0).length;
+          const lw = s.filter((n) => n <= 30).length;
+          const dec = [0, 0, 0, 0, 0, 0];
+          s.forEach((n) => dec[Math.floor((n - 1) / 10)]++);
+          const sp = dec.filter((d) => d > 0).length;
+          const fS = Math.round(
+            (s.reduce((a, n) => a + freq[n] / maxF, 0) / 6) * 100,
+          );
+          const lS = Math.round(
+            (s.reduce((a, n) => a + ls[n] / N, 0) / 6) * 100,
+          );
+          let mxC = 1,
+            cu = 1;
+          for (let i = 1; i < s.length; i++) {
+            s[i] === s[i - 1] + 1 ? cu++ : (cu = 1);
+            mxC = Math.max(mxC, cu);
+          }
+          const sumSc =
+            sum >= 150 && sum <= 210 ? 100 : sum >= 130 && sum <= 230 ? 70 : 40;
+          const evSc = ev === 3 ? 100 : ev === 2 || ev === 4 ? 80 : 50;
+          const spSc = sp >= 5 ? 100 : sp === 4 ? 80 : sp === 3 ? 55 : 30;
+          const seqSc = mxC <= 2 ? 100 : mxC === 3 ? 75 : mxC === 4 ? 50 : 25;
+          const total = Math.round(
+            sumSc * 0.25 +
+              evSc * 0.18 +
+              spSc * 0.18 +
+              fS * 0.15 +
+              lS * 0.14 +
+              seqSc * 0.1,
+          );
+          const nSt = s.map((n) =>
+            ls[n] <= 5
+              ? "hot"
+              : freq[n] >= maxF * 0.8
+                ? "warm"
+                : ls[n] > 30 || freq[n] <= minF * 1.5
+                  ? "cold"
+                  : "normal",
+          );
+          const issues = [],
+            goods = [];
+          if (sum < 150) issues.push(`Soma ${sum} baixa (ideal 150–210)`);
+          if (sum > 210) issues.push(`Soma ${sum} alta (ideal 150–210)`);
+          if (ev === 0) issues.push("Todos ímpares — sem equilíbrio");
+          if (ev === 6) issues.push("Todos pares — sem equilíbrio");
+          if (sp <= 2)
+            issues.push(`Números concentrados (${sp}/6 dezenas cobertas)`);
+          if (mxC >= 4) issues.push(`${mxC} consecutivos — padrão raro`);
+          if (sum >= 150 && sum <= 210) goods.push("✅ Soma ideal");
+          if (ev >= 2 && ev <= 4) goods.push("✅ Boa paridade");
+          if (sp >= 4) goods.push("✅ Boa distribuição");
+          if (mxC <= 2) goods.push("✅ Sem longas sequências");
+          return {
+            s,
+            sum,
+            ev,
+            lw,
+            sp,
+            fS,
+            lS,
+            sumSc,
+            evSc,
+            spSc,
+            seqSc,
+            total,
+            nSt,
+            issues,
+            goods,
+            mxC,
+          };
+        }
+
+        const ans = valid.map((j) => ({ ...j, a: anal(j.nums) }));
+        const best = ans.reduce((a, b) => (b.a.total > a.a.total ? b : a));
+
+        document.getElementById("mjEmpty").style.display = "none";
+        document.getElementById("mjOut").style.display = "block";
+
+        // Recomendação
+        const rec = document.getElementById("mjRec");
+        rec.style.display = "block";
+        const ba = best.a;
+        document.getElementById("mjRecBody").innerHTML = `
+    <div class="mjreci">
+      <div class="mjrecit">🏆 Melhor jogo: Jogo ${best.i + 1}</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${ba.s.map((n, i) => `<div class="ball" style="background:${BC[i]}">${fmt(n)}</div>`).join("")}</div>
+      <div class="msr"><span class="msl">Score</span><span class="msv ok">${ba.total}/100</span></div>
+      <div class="msr"><span class="msl">Soma</span><span class="msv ${ba.sum >= 150 && ba.sum <= 210 ? "ok" : "warn"}">${ba.sum}</span></div>
+      <div class="msr"><span class="msl">Paridade</span><span class="msv">${ba.ev}P / ${6 - ba.ev}I</span></div>
+      <div class="msr"><span class="msl">Dezenas cobertas</span><span class="msv">${ba.sp}/6</span></div>
+    </div>
+    <div class="mjreci">
+      <div class="mjrecit">💡 Análise do melhor jogo</div>
+      ${ba.goods.map((g) => `<div style="font-size:12px;color:#6ee7b7;margin-bottom:5px">${g}</div>`).join("")}
+      ${ba.issues.map((g) => `<div style="font-size:12px;color:#fcd34d;margin-bottom:5px">⚠️ ${g}</div>`).join("")}
+      ${!ba.issues.length ? '<div style="font-size:12px;color:#6ee7b7">🎯 Perfil estatístico excelente!</div>' : ""}
+    </div>`;
+
+        // Cards individuais
+        document.getElementById("mjGrid").innerHTML = ans
+          .map(({ i, a }) => {
+            const isBest = i === best.i;
+            const sc3 =
+              a.total >= 75 ? "#10b981" : a.total >= 55 ? "#f59e0b" : "#ef4444";
+            const balls = a.s
+              .map((n, j) => {
+                const cl = a.nSt[j];
+                const co =
+                  cl === "hot"
+                    ? "#f97316"
+                    : cl === "warm"
+                      ? "#f59e0b"
+                      : cl === "cold"
+                        ? "#3b82f6"
+                        : "#6b7280";
+                const tip =
+                  cl === "hot"
+                    ? "🔥 Quente"
+                    : cl === "warm"
+                      ? "♨️ Morno"
+                      : cl === "cold"
+                        ? "❄️ Frio"
+                        : "➖ Normal";
+                return `<div class="mjball" style="background:${co}" title="${tip}: #${fmt(n)} — ${CUR.stats.freq[n - 1]}× sorteado">${fmt(n)}</div>`;
+              })
+              .join("");
+            const main =
+              a.issues.length === 0
+                ? { cls: "good", txt: "Perfil estatístico excelente!" }
+                : a.issues.length <= 1
+                  ? { cls: "warn", txt: a.issues[0] }
+                  : {
+                      cls: "bad",
+                      txt: `${a.issues.length} pontos a melhorar: ${a.issues[0]}`,
+                    };
+            return `<div class="mjrc${isBest ? " best" : ""}">
+      <div class="mjrh"><div class="mjrt">Jogo ${i + 1}${isBest ? " 🏆" : ""}</div><div style="font-size:22px;font-weight:800;font-family:var(--mono);color:${sc3}">${a.total}<span style="font-size:12px;color:var(--muted)">/100</span></div></div>
+      <div class="mjballs">${balls}</div>
+      <div class="strk" style="margin-bottom:12px"><div class="sfil" style="width:${a.total}%;background:${sc3}"></div></div>
+      <div class="msr"><span class="msl">Soma</span><span class="msv ${a.sum >= 150 && a.sum <= 210 ? "ok" : a.sum >= 130 && a.sum <= 230 ? "warn" : "bad"}">${a.sum} <span style="font-size:9px;color:var(--muted)">(ideal 150–210)</span></span></div>
+      <div class="msr"><span class="msl">Paridade</span><span class="msv ${a.evSc >= 80 ? "ok" : "warn"}">${a.ev}P / ${6 - a.ev}I</span></div>
+      <div class="msr"><span class="msl">Dezenas cobertas</span><span class="msv ${a.sp >= 4 ? "ok" : a.sp === 3 ? "warn" : "bad"}">${a.sp}/6 faixas</span></div>
+      <div class="msr"><span class="msl">Freq. histórica</span><span class="msv">${a.fS}/100</span></div>
+      <div class="msr"><span class="msl">Atraso médio</span><span class="msv">${a.lS}/100</span></div>
+      <div class="msr"><span class="msl">Consecutivos máx.</span><span class="msv ${a.mxC <= 3 ? "ok" : "bad"}">${a.mxC}</span></div>
+      <div class="adv ${main.cls}">${main.txt}</div>
+      <div style="margin-top:8px;font-size:10px;color:var(--dim)">🔥 Quente · ♨️ Morno · ❄️ Frio · ➖ Normal</div>
+    </div>`;
+          })
+          .join("");
+
+        // Radar
+        if (cMJComp) cMJComp.destroy();
+        cMJComp = new Chart(document.getElementById("cMJComp"), {
+          type: "radar",
+          data: {
+            labels: [
+              "Soma",
+              "Paridade",
+              "Distribuição",
+              "Frequência",
+              "Atraso",
+              "Consecutivos",
+            ],
+            datasets: ans.map(({ i, a }, j) => ({
+              label: `Jogo ${i + 1}`,
+              data: [a.sumSc, a.evSc, a.spSc, a.fS, a.lS, a.seqSc],
+              borderColor: BC[j % 6],
+              backgroundColor: BC[j % 6] + "22",
+              pointBackgroundColor: BC[j % 6],
+              borderWidth: 2,
+              pointRadius: 4,
+            })),
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "right",
+                labels: { color: "#94a3b8", font: { size: 11 } },
+              },
+            },
+            scales: {
+              r: {
+                ticks: {
+                  color: "#64748b",
+                  backdropColor: "transparent",
+                  font: { size: 9 },
+                },
+                grid: { color: "rgba(255,255,255,.08)" },
+                pointLabels: { color: "#94a3b8", font: { size: 11 } },
+                min: 0,
+                max: 100,
+              },
+            },
+          },
+        });
+        showToast(
+          `✅ ${valid.length} jogo(s) analisado(s)! Melhor: Jogo ${best.i + 1} — Score ${best.a.total}/100`,
+        );
+      }
+
+      // ═══════ MINHAS APOSTAS ═══════
+      let APOSTAS = [];
+
+      function loadApostasFromStorage() {
+        try {
+          const stored = localStorage.getItem(LS_AP);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              APOSTAS = parsed;
+            }
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      function saveApostasToStorage() {
+        try {
+          localStorage.setItem(LS_AP, JSON.stringify(APOSTAS));
+        } catch (e) { /* ignore */ }
+      }
+
+      function registerBet() {
+        const concVal = parseInt(document.getElementById("apConc").value);
+        if (!concVal || concVal < 1) {
+          showToast("⚠️ Informe o número do concurso!");
+          return;
+        }
+        const nums = [];
+        for (let i = 1; i <= 6; i++) {
+          const v = parseInt(document.getElementById(`apN${i}`).value);
+          if (!v || v < 1 || v > 60) {
+            showToast(`⚠️ Dezena ${i} inválida (01–60)!`);
+            return;
+          }
+          if (nums.includes(v)) {
+            showToast(`⚠️ Dezena ${fmt(v)} repetida!`);
+            return;
+          }
+          nums.push(v);
+        }
+        nums.sort((a, b) => a - b);
+        APOSTAS.push({
+          id: Date.now(),
+          concurso: concVal,
+          dezenas: nums,
+          createdAt: new Date().toISOString(),
+        });
+        saveApostasToStorage();
+        // Clear form
+        for (let i = 1; i <= 6; i++) {
+          document.getElementById(`apN${i}`).value = "";
+        }
+        renderApostasUI();
+        showToast(`✅ Aposta registrada para o concurso #${concVal}!`);
+      }
+
+      function quickBet() {
+        const concEl = document.getElementById("apConc");
+        if (!concEl.value && CUR) {
+          const lc = CUR.lastConcurso || (CUR.results[0]?.concurso || 0);
+          concEl.value = lc + 1;
+        }
+        const s = new Set();
+        while (s.size < 6) s.add(Math.floor(Math.random() * 60) + 1);
+        const nums = [...s].sort((a, b) => a - b);
+        for (let i = 1; i <= 6; i++) {
+          document.getElementById(`apN${i}`).value = fmt(nums[i - 1]);
+        }
+      }
+
+      function deleteBet(id) {
+        APOSTAS = APOSTAS.filter((a) => a.id !== id);
+        saveApostasToStorage();
+        renderApostasUI();
+      }
+
+      function getDrawResult(concurso) {
+        if (!ALL.length) return null;
+        return ALL.find((r) => r.concurso === concurso) || null;
+      }
+
+      function checkBetResult(bet) {
+        const draw = getDrawResult(bet.concurso);
+        if (!draw) return { drawn: false, matches: [], acertos: 0, draw: null };
+        const drawnSet = new Set(draw.dezenas);
+        const matches = bet.dezenas.filter((n) => drawnSet.has(n));
+        return { drawn: true, matches, acertos: matches.length, draw };
+      }
+
+      function renderApostasUI() {
+        const emptyEl = document.getElementById("apEmpty");
+        const listEl = document.getElementById("apList");
+
+        if (!APOSTAS.length) {
+          emptyEl.style.display = "block";
+          listEl.innerHTML = "";
+          document.getElementById("apTotalBets").textContent = "0";
+          document.getElementById("apBestResult").textContent = "—";
+          document.getElementById("apWinCount").textContent = "0";
+          document.getElementById("apSpent").textContent = "R$ 0";
+          return;
+        }
+        emptyEl.style.display = "none";
+
+        // Compute summary
+        let bestAcertos = 0;
+        let quadras = 0, quinas = 0, senas = 0;
+        const results = APOSTAS.map((bet) => {
+          const res = checkBetResult(bet);
+          if (res.acertos > bestAcertos) bestAcertos = res.acertos;
+          if (res.acertos === 4) quadras++;
+          if (res.acertos === 5) quinas++;
+          if (res.acertos === 6) senas++;
+          return { bet, res };
+        });
+
+        document.getElementById("apTotalBets").textContent = APOSTAS.length;
+        document.getElementById("apBestResult").textContent =
+          bestAcertos === 6 ? "SENA!" :
+          bestAcertos === 5 ? "QUINA!" :
+          bestAcertos === 4 ? "QUADRA!" :
+          bestAcertos > 0 ? `${bestAcertos} acertos` : "—";
+        document.getElementById("apWinCount").textContent = quadras + quinas + senas;
+        document.getElementById("apSpent").textContent =
+          `R$ ${(APOSTAS.length * 5).toLocaleString("pt-BR")},00`;
+
+        // Group by concurso
+        const groups = {};
+        results.forEach(({ bet, res }) => {
+          if (!groups[bet.concurso]) groups[bet.concurso] = [];
+          groups[bet.concurso].push({ bet, res });
+        });
+
+        // Sort concursos descending
+        const sortedConcs = Object.keys(groups)
+          .map(Number)
+          .sort((a, b) => b - a);
+
+        let html = "";
+        sortedConcs.forEach((conc) => {
+          const bets = groups[conc];
+          const firstRes = bets[0].res;
+          const drawnBalls = firstRes.drawn
+            ? firstRes.draw.dezenas
+                .map(
+                  (n, j) =>
+                    `<div class="ball ball-xs" style="background:${BC[j % 6]}">${fmt(n)}</div>`,
+                )
+                .join("")
+            : "";
+
+          html += `<div class="ap-group">`;
+          html += `<div class="ap-group-title">Concurso #${conc}`;
+          if (firstRes.drawn) {
+            html += ` — ${firstRes.draw.data || ""}`;
+            if (firstRes.draw.acumulado) {
+              html += ` <span class="hbdg ba" style="font-size:9px">Acumulou</span>`;
+            }
+          } else {
+            html += ` <span class="ap-result-badge ap-badge-pending">Aguardando sorteio...</span>`;
+          }
+          html += `</div>`;
+
+          if (firstRes.drawn) {
+            html += `<div class="ap-drawn"><span class="ap-drawn-label">Resultado:</span>${drawnBalls}</div>`;
+          }
+
+          bets.forEach(({ bet, res }) => {
+            const matchSet = new Set(res.matches);
+            const balls = bet.dezenas
+              .map((n) => {
+                if (!res.drawn) {
+                  return `<div class="ap-ball pending">${fmt(n)}</div>`;
+                }
+                if (matchSet.has(n)) {
+                  return `<div class="ap-ball match">${fmt(n)}</div>`;
+                }
+                return `<div class="ap-ball nomatch">${fmt(n)}</div>`;
+              })
+              .join("");
+
+            let badge = "";
+            if (res.drawn) {
+              if (res.acertos === 6) badge = `<span class="ap-result-badge ap-badge-sena">SENA!</span>`;
+              else if (res.acertos === 5) badge = `<span class="ap-result-badge ap-badge-quina">QUINA!</span>`;
+              else if (res.acertos === 4) badge = `<span class="ap-result-badge ap-badge-quadra">QUADRA!</span>`;
+              else badge = `<span class="ap-result-badge ap-badge-normal">${res.acertos} acerto${res.acertos !== 1 ? "s" : ""}</span>`;
+            } else {
+              badge = `<span class="ap-result-badge ap-badge-pending">Aguardando...</span>`;
+            }
+
+            html += `<div class="ap-bet-card">
+              <div class="ap-bet-header">
+                <div>${badge}</div>
+                <button class="ap-del-btn" onclick="deleteBet(${bet.id})" title="Remover aposta">✕</button>
+              </div>
+              <div class="ap-bet-balls">${balls}</div>
+              <div style="font-size:10px;color:var(--dim);font-family:var(--mono)">
+                Registrada em ${new Date(bet.createdAt).toLocaleString("pt-BR")}
+              </div>
+            </div>`;
+          });
+
+          html += `</div>`;
+        });
+
+        listEl.innerHTML = html;
+      }
+
+      // Check all bets for a given concurso and notify
+      function checkBetsForConcurso(concurso) {
+        const matching = APOSTAS.filter((a) => a.concurso === concurso);
+        if (!matching.length) return;
+        matching.forEach((bet) => {
+          const res = checkBetResult(bet);
+          if (res.drawn && res.acertos >= 4) {
+            const label =
+              res.acertos === 6 ? "SENA!!!" :
+              res.acertos === 5 ? "QUINA!!" :
+              "QUADRA!";
+            showToast(
+              `🎉 ${label} no concurso #${concurso}! Sua aposta [${bet.dezenas.map(fmt).join("·")}] acertou ${res.acertos} números!`,
+            );
+          }
+        });
+        renderApostasUI();
+      }
+
+      // ── FETCH (dynamic) ──
+      function startFetch() {
+        const b = document.getElementById("fbar");
+        b.classList.add("v");
+        document.getElementById("flabel").textContent =
+          "Buscando histórico completo desde 1996...";
+
+        // Use lastConcurso from SSE data if available, otherwise fall back
+        const LAST = CUR?.lastConcurso || (ALL[0]?.concurso) || 3000;
+        const FIRST = 1;
+        const total = LAST - FIRST + 1;
+        let loaded = 0;
+
+        function upd(msg) {
+          const pct = Math.round((loaded / total) * 100);
+          document.getElementById("ffill").style.width = pct + "%";
+          document.getElementById("fpct").textContent = pct + "%";
+          document.getElementById("flabel").textContent = msg;
+        }
+        async function fb(nums) {
+          return Promise.all(
+            nums.map(async (n) => {
+              try {
+                const r = await fetch(`${SERVER_URL}/api/fetch-one/${n}`);
+                if (!r.ok) return null;
+                return r.json();
+              } catch {
+                return null;
+              }
+            }),
+          );
+        }
+        (async () => {
+          const nums = Array.from({ length: total }, (_, i) => LAST - i);
+          for (let i = 0; i < nums.length; i += 20) {
+            const res = await fb(nums.slice(i, i + 20));
+            loaded += 20;
+            upd(`Baixando... ${Math.min(loaded, total)}/${total}`);
+          }
+          document.getElementById("flabel").textContent =
+            "✅ Concluído! Recarregando...";
+          setTimeout(() => {
+            b.classList.remove("v");
+            location.reload();
+          }, 2000);
+        })();
+      }
+
+      // ── TOAST ──
+      let toastTimer = null;
+      function showToast(msg) {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.classList.add("show");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove("show"), 6000);
+      }
+
+      // ── Modo de operação ──
+      // static  = GitHub Pages (lê data.json/stats.json, atualiza via robô)
+      // live    = servidor Node local rodando (SSE em tempo real)
+      let LIVE = false;
+      function setStatus(mode) {
+        const dot = document.getElementById("sdot"),
+          txt = document.getElementById("stxt");
+        if (!dot || !txt) return;
+        if (mode === "live") {
+          dot.classList.remove("off");
+          txt.textContent = "Ao vivo";
+        } else if (mode === "static") {
+          dot.classList.remove("off");
+          txt.textContent = "Atualizado";
+        } else {
+          dot.classList.add("off");
+          txt.textContent = "Reconectando...";
+        }
+      }
+
+      // ── Carregamento estático (funciona sem servidor) ──
+      async function loadStatic() {
+        try {
+          const [dR, sR] = await Promise.all([
+            fetch("./data.json", { cache: "no-store" }),
+            fetch("./stats.json", { cache: "no-store" }),
+          ]);
+          if (!dR.ok || !sR.ok) return false;
+          const d = await dR.json();
+          const stats = await sR.json();
+          const results = d.results || d;
+          if (!Array.isArray(results) || !results.length) return false;
+          renderAll({
+            results,
+            stats,
+            lastUpdated: d.generatedAt || new Date().toISOString(),
+            lastConcurso: d.lastConcurso || results[0]?.concurso,
+          });
+          if (!LIVE) setStatus("static");
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      // Re-checa periodicamente (no modo estático o robô atualiza os arquivos)
+      async function refreshStatic() {
+        if (LIVE) return;
+        const prev = CUR?.lastConcurso || 0;
+        const ok = await loadStatic();
+        if (ok && (CUR?.lastConcurso || 0) > prev) {
+          showToast(`🎉 Atualizado! Novo concurso #${CUR.lastConcurso}`);
+        }
+      }
+
+      // ── SSE (tempo real — só quando há servidor Node) ──
+      let rD = 1000;
+      function connectSSE(hasStatic) {
+        const es = new EventSource(`${SERVER_URL}/api/stream`);
+        es.addEventListener("init", (e) => {
+          LIVE = true;
+          setStatus("live");
+          rD = 1000;
+          renderAll(JSON.parse(e.data));
+        });
+        es.addEventListener("new-result", (e) => {
+          const { result, stats, lastUpdated, lastConcurso, nextConcurso } =
+            JSON.parse(e.data);
+          result._isNew = true;
+          if (CUR) {
+            CUR.results = [result, ...CUR.results];
+            CUR.stats = stats;
+            CUR.lastUpdated = lastUpdated;
+            CUR.lastConcurso = lastConcurso ?? nextConcurso - 1;
+            renderAll(CUR);
+          }
+          showToast(
+            `🎉 Novo! #${result.concurso}: ${result.dezenas.map(fmt).join(" · ")}`,
+          );
+          document.title = `NOVO! #${result.concurso} | Mega-Sena`;
+          setTimeout(() => (document.title = "Mega-Sena · Análise"), 10000);
+
+          // Auto-check registered bets for this concurso
+          checkBetsForConcurso(result.concurso);
+        });
+        es.onerror = () => {
+          es.close();
+          // Se já temos os dados estáticos (GitHub Pages), não adianta
+          // insistir no SSE — ficamos no modo "Atualizado".
+          if (hasStatic) {
+            LIVE = false;
+            setStatus("static");
+            return;
+          }
+          setStatus("reconnecting");
+          setTimeout(() => connectSSE(hasStatic), rD);
+          rD = Math.min(rD * 2, 30000);
+        };
+      }
+      if ("Notification" in window && Notification.permission === "default")
+        Notification.requestPermission();
+
+      // ── INIT ──
+      loadMJFromStorage();
+      loadApostasFromStorage();
+      renderMJInputs();
+      renderApostasUI();
+      (async () => {
+        // 1) Carrega dados estáticos (instantâneo, funciona no GitHub Pages)
+        const hasStatic = await loadStatic();
+        // 2) Tenta upgrade para tempo real (só conecta se houver servidor Node)
+        connectSSE(hasStatic);
+        // 3) No modo estático, re-checa novos concursos a cada 10 min
+        setInterval(refreshStatic, 10 * 60 * 1000);
+      })();
+    </script>
+  </body>
+</html>

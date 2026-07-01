@@ -1,0 +1,10 @@
+node_modules/
+*.log
+*.tmp
+data.json.tmp
+public/*.json.tmp
+bets.json
+.DS_Store
+.vscode/
+.claude/*.lock
+enrich.log

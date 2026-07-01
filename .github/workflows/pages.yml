@@ -1,0 +1,74 @@
+name: Atualizar dados e publicar site
+
+on:
+  # Sorteios: Ter/Qui/Sáb 21h (Brasília) = Qua/Sex/Dom 00h UTC.
+  # Rodamos algumas vezes depois de cada sorteio + uma vez por dia por segurança.
+  schedule:
+    - cron: "0 1,2,4 * * 3,5,0" # 01/02/04 UTC nas Qua/Sex/Dom
+    - cron: "0 12 * * *"        # diária, meio-dia UTC (garantia)
+  # Botão "Run workflow" na aba Actions
+  workflow_dispatch:
+  # Republica quando você altera o código do site
+  push:
+    branches: [main]
+    paths:
+      - "public/**"
+      - "*.js"
+      - ".github/workflows/pages.yml"
+
+permissions:
+  contents: write   # commitar o data.json atualizado
+  pages: write      # publicar no GitHub Pages
+  id-token: write
+
+# Evita execuções concorrentes sobrescrevendo o deploy
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund
+
+      - name: Buscar concursos novos (robô)
+        run: node update.js
+
+      - name: Gerar site estático (data.json + stats.json)
+        run: node build.js
+
+      - name: Commitar dados atualizados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json public/data.json public/stats.json
+          if git diff --staged --quiet; then
+            echo "Nada novo para commitar."
+          else
+            git commit -m "chore: atualiza dados da Mega-Sena [skip ci]"
+            git push
+          fi
+
+      - name: Preparar artefato do Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
