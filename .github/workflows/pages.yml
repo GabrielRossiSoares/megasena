@@ -72,3 +72,8 @@ jobs:
       - name: Publicar no GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # A fila do Pages deste repo às vezes fica minutos em "queued".
+          # Esperamos até 30 min (padrão é só 10) para não dar timeout à toa.
+          timeout: 1800000
+          error_count: 20
