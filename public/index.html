@@ -2199,13 +2199,16 @@
           }
           const seqOk =
             mxC <= 2 ? 1 : mxC === 3 ? 0.75 : mxC === 4 ? 0.5 : 0.25;
+          const repetiu = results.some(r => r.dezenas.join(',') === sorted.join(','));
+          const repOk = repetiu ? 0 : 1;
           return Math.round(
-            (sumOk * 0.25 +
-              evOk * 0.18 +
-              spOk * 0.18 +
+            (sumOk * 0.20 +
+              evOk * 0.15 +
+              spOk * 0.15 +
               fS * 0.15 +
-              lS * 0.14 +
-              seqOk * 0.1) *
+              lS * 0.15 +
+              seqOk * 0.10 +
+              repOk * 0.10) *
               100,
           );
         }
