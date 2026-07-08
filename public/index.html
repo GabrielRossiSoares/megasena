@@ -10,6 +10,7 @@
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
       :root {
         --bg: #080b14;
@@ -1167,6 +1168,69 @@
       .ap-del-btn:hover {
         color: var(--red);
       }
+      .sug-hist-card {
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+      .sug-hist-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .sug-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+      }
+      .sug-strat {
+        font-size: 11px;
+        color: var(--muted);
+        width: 150px;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      .sug-balls {
+        display: flex;
+        gap: 4px;
+        flex: 1;
+      }
+      .sug-ac {
+        font-size: 12px;
+        font-weight: 800;
+        min-width: 80px;
+        text-align: right;
+      }
+      .sug-stat-card {
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        text-align: center;
+        flex: 1;
+        min-width: 120px;
+      }
+      .sug-stat-val {
+        font-size: 24px;
+        font-weight: 800;
+        font-family: var(--mono);
+        margin-bottom: 4px;
+      }
+      .sug-stat-lbl {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        font-weight: 700;
+      }
     </style>
   </head>
   <body>
@@ -1269,6 +1333,19 @@
             >
               Calculando sugestões...
             </div>
+          </div>
+        </div>
+
+        <!-- 📊 Histórico de Sugestões -->
+        <div style="margin-bottom: 20px">
+          <div style="font-size: 18px; font-weight: 800; margin-bottom: 16px;">
+            📊 Histórico de Sugestões x Resultados Reais
+          </div>
+          <div class="ap-summary" id="sugHistStats" style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+            <div style="text-align:center;padding:20px;color:var(--muted);width:100%">Carregando estatísticas...</div>
+          </div>
+          <div id="sugHistList">
+             <div style="text-align:center;padding:20px;color:var(--muted)">Carregando histórico...</div>
           </div>
         </div>
         <div class="g2">
@@ -1840,7 +1917,12 @@
         ALL = [];
       const fmt = (n) => String(n).padStart(2, "0");
 
-      // ── localStorage keys ──
+      // ── Supabase ──
+      const SUPABASE_URL = "https://diyptbtsaqfjnucwakpn.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeXB0YnRzYXFmam51Y3dha3BuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MzYyNDUsImV4cCI6MjA5OTExMjI0NX0.GCdAm3x6X-LDX6PCQBCBg7IkS8Xyt-Aarci8pS4L588";
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      // ── localStorage keys (fallback) ──
       const LS_MJ = "megasena_meus_jogos";
       const LS_AP = "megasena_apostas";
 
@@ -2053,6 +2135,8 @@
           stats.total.toLocaleString("pt-BR");
         startCD(lc);
         renderSugs(stats, results, lc);
+        verificarAcertosSugestoes(results);
+        renderSugHistory();
         renderHmap(stats.freq, stats.maxFreq, stats.minFreq);
         renderBars("top10", stats.top10, stats.freq, stats.maxFreq, "#f97316");
         renderBars("bot10", stats.bot10, stats.freq, stats.maxFreq, "#3b82f6");
@@ -2171,6 +2255,7 @@
       }
       function renderSugs(stats, results, lc) {
         const sugs = genSugs(stats, results);
+        const nextConc = lc + 1;
         const sc = ["s1", "s2", "s3"],
           bc = ["b1", "b2", "b3"],
           lb = ["🥇 Mais provável", "🥈 2ª opção", "🥉 3ª opção"];
@@ -2200,6 +2285,111 @@
     </div>`;
           })
           .join("");
+        // Salvar sugestões no Supabase (upsert — não sobrescreve se já existe resultado)
+        saveSugestoes(nextConc, sugs);
+      }
+
+      async function saveSugestoes(concurso, sugs) {
+        try {
+          const payload = sugs.map(s => ({ nums: s.nums, strat: s.strat, score: s.score }));
+          const { data: existing } = await sb.from("sugestoes_historico").select("id,resultado").eq("concurso", concurso).maybeSingle();
+          if (!existing) {
+            await sb.from("sugestoes_historico").insert({ concurso, sugestoes: payload });
+          }
+          // Se já existir, não sobrescreve (mantém resultado se já foi verificado)
+        } catch (e) { /* ignore */ }
+      }
+
+      async function verificarAcertosSugestoes(results) {
+        try {
+          const { data: pendentes, error } = await sb
+            .from("sugestoes_historico")
+            .select("*")
+            .is("resultado", null);
+          if (error || !pendentes || !pendentes.length) return;
+          const updates = [];
+          for (const sug of pendentes) {
+            const drawn = results.find(r => r.concurso === sug.concurso);
+            if (!drawn) continue;
+            const resultado = drawn.dezenas;
+            const resultSet = new Set(resultado);
+            const acertos = sug.sugestoes.map(s => s.nums.filter(n => resultSet.has(n)).length);
+            updates.push(
+              sb.from("sugestoes_historico").update({
+                resultado,
+                acertos,
+                verificado_em: new Date().toISOString(),
+              }).eq("id", sug.id)
+            );
+          }
+          if (updates.length) await Promise.all(updates);
+          if (updates.length) renderSugHistory();
+        } catch (e) { /* ignore */ }
+      }
+
+      async function renderSugHistory() {
+        const el = document.getElementById("sugHistList");
+        const statsEl = document.getElementById("sugHistStats");
+        if (!el) return;
+        try {
+          const { data, error } = await sb
+            .from("sugestoes_historico")
+            .select("*")
+            .not("resultado", "is", null)
+            .order("concurso", { ascending: false })
+            .limit(30);
+          if (error || !data || !data.length) {
+            el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted)">Nenhum resultado verificado ainda. As sugestões aparecem aqui após o sorteio.</div>`;
+            return;
+          }
+          // Estatísticas acumuladas
+          let totalRodadas = data.length;
+          let melhor = 0;
+          const somaAcertos = [0, 0, 0];
+          data.forEach(row => {
+            if (!row.acertos) return;
+            row.acertos.forEach((a, i) => {
+              somaAcertos[i] += a;
+              if (a > melhor) melhor = a;
+            });
+          });
+          const estratNames = ["Balanceada", "Quentes", "Frios"];
+          if (statsEl) {
+            statsEl.innerHTML = `
+              <div class="sug-stat-card"><div class="sug-stat-val" style="color:var(--green)">${totalRodadas}</div><div class="sug-stat-lbl">Rodadas monitoradas</div></div>
+              <div class="sug-stat-card"><div class="sug-stat-val" style="color:var(--gold)">${melhor}</div><div class="sug-stat-lbl">Melhor acerto</div></div>
+              ${somaAcertos.map((s, i) => `<div class="sug-stat-card"><div class="sug-stat-val" style="color:var(--cyan)">${(s/totalRodadas).toFixed(1)}</div><div class="sug-stat-lbl">Média ${estratNames[i]}</div></div>`).join("")}
+            `;
+          }
+          // Lista de rodadas
+          el.innerHTML = data.map(row => {
+            if (!row.resultado || !row.sugestoes) return "";
+            const drawnSet = new Set(row.resultado);
+            const drawnBalls = row.resultado.map((n, j) =>
+              `<div class="ball ball-xs" style="background:${BC[j%6]}">${fmt(n)}</div>`
+            ).join("");
+            const sugRows = row.sugestoes.map((s, i) => {
+              const ac = row.acertos ? row.acertos[i] : 0;
+              const color = ac >= 4 ? "var(--green)" : ac >= 3 ? "var(--gold)" : ac >= 2 ? "var(--cyan)" : "var(--muted)";
+              const balls = s.nums.map(n => {
+                const hit = drawnSet.has(n);
+                return `<div class="ap-ball ${hit ? "match" : "nomatch"} ball-xs">${fmt(n)}</div>`;
+              }).join("");
+              return `<div class="sug-row"><div class="sug-strat">${s.strat}</div><div class="sug-balls">${balls}</div><div class="sug-ac" style="color:${color}">${ac} acerto${ac!==1?"s":""}</div></div>`;
+            }).join("");
+            const dt = row.verificado_em ? new Date(row.verificado_em).toLocaleDateString("pt-BR") : "";
+            return `<div class="sug-hist-card">
+              <div class="sug-hist-header">
+                <div>Concurso <strong>#${row.concurso}</strong></div>
+                <div style="color:var(--muted);font-size:11px">${dt}</div>
+                <div style="font-size:11px;color:var(--muted)">Resultado: ${drawnBalls}</div>
+              </div>
+              ${sugRows}
+            </div>`;
+          }).join("");
+        } catch (e) {
+          el.innerHTML = `<div style="color:var(--red)">Erro ao carregar histórico.</div>`;
+        }
       }
 
       // ── HEATMAP ──
@@ -2645,21 +2835,36 @@
       // ═══════ MEUS JOGOS ═══════
       let MJG = [Array(6).fill("")];
 
-      function loadMJFromStorage() {
+      async function loadMJFromStorage() {
         try {
-          const stored = localStorage.getItem(LS_MJ);
-          if (stored) {
-            const parsed = JSON.parse(stored);
+          const { data, error } = await sb.from("meus_jogos").select("id,jogos").order("id", { ascending: false }).limit(1);
+          if (!error && data && data.length > 0) {
+            const parsed = data[0].jogos;
             if (Array.isArray(parsed) && parsed.length > 0) {
               MJG = parsed;
+              MJ_DB_ID = data[0].id;
             }
+          } else {
+            // fallback localStorage
+            const stored = localStorage.getItem(LS_MJ);
+            if (stored) { const p = JSON.parse(stored); if (Array.isArray(p) && p.length) MJG = p; }
           }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          const stored = localStorage.getItem(LS_MJ);
+          if (stored) { try { const p = JSON.parse(stored); if (Array.isArray(p) && p.length) MJG = p; } catch(_) {} }
+        }
       }
 
-      function saveMJToStorage() {
+      let MJ_DB_ID = null;
+      async function saveMJToStorage() {
         try {
           localStorage.setItem(LS_MJ, JSON.stringify(MJG));
+          if (MJ_DB_ID) {
+            await sb.from("meus_jogos").update({ jogos: MJG, updated_at: new Date().toISOString() }).eq("id", MJ_DB_ID);
+          } else {
+            const { data } = await sb.from("meus_jogos").insert({ jogos: MJG }).select("id");
+            if (data && data[0]) MJ_DB_ID = data[0].id;
+          }
         } catch (e) { /* ignore */ }
       }
 
@@ -2990,25 +3195,35 @@
       // ═══════ MINHAS APOSTAS ═══════
       let APOSTAS = [];
 
-      function loadApostasFromStorage() {
+      async function loadApostasFromStorage() {
         try {
-          const stored = localStorage.getItem(LS_AP);
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) {
-              APOSTAS = parsed;
-            }
+          const { data, error } = await sb.from("apostas").select("*").order("concurso", { ascending: false });
+          if (!error && data) {
+            APOSTAS = data.map(r => ({
+              id: r.id,
+              concurso: r.concurso,
+              dezenas: r.dezenas,
+              createdAt: r.created_at,
+            }));
+            localStorage.setItem(LS_AP, JSON.stringify(APOSTAS));
+          } else {
+            const stored = localStorage.getItem(LS_AP);
+            if (stored) { const p = JSON.parse(stored); if (Array.isArray(p)) APOSTAS = p; }
           }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          const stored = localStorage.getItem(LS_AP);
+          if (stored) { try { const p = JSON.parse(stored); if (Array.isArray(p)) APOSTAS = p; } catch(_) {} }
+        }
+        renderApostasUI();
       }
 
-      function saveApostasToStorage() {
+      async function saveApostasToStorage() {
         try {
           localStorage.setItem(LS_AP, JSON.stringify(APOSTAS));
         } catch (e) { /* ignore */ }
       }
 
-      function registerBet() {
+      async function registerBet() {
         const concVal = parseInt(document.getElementById("apConc").value);
         if (!concVal || concVal < 1) {
           showToast("⚠️ Informe o número do concurso!");
@@ -3028,19 +3243,28 @@
           nums.push(v);
         }
         nums.sort((a, b) => a - b);
-        APOSTAS.push({
-          id: Date.now(),
-          concurso: concVal,
-          dezenas: nums,
-          createdAt: new Date().toISOString(),
-        });
-        saveApostasToStorage();
-        // Clear form
-        for (let i = 1; i <= 6; i++) {
-          document.getElementById(`apN${i}`).value = "";
+        try {
+          const { data, error } = await sb.from("apostas").insert({
+            concurso: concVal,
+            dezenas: nums,
+          }).select("*");
+          if (!error && data && data[0]) {
+            APOSTAS.push({
+              id: data[0].id,
+              concurso: data[0].concurso,
+              dezenas: data[0].dezenas,
+              createdAt: data[0].created_at,
+            });
+          } else {
+            APOSTAS.push({ id: Date.now(), concurso: concVal, dezenas: nums, createdAt: new Date().toISOString() });
+          }
+        } catch(_) {
+          APOSTAS.push({ id: Date.now(), concurso: concVal, dezenas: nums, createdAt: new Date().toISOString() });
         }
+        await saveApostasToStorage();
+        for (let i = 1; i <= 6; i++) document.getElementById(`apN${i}`).value = "";
         renderApostasUI();
-        showToast(`✅ Aposta registrada para o concurso #${concVal}!`);
+        showToast(`✅ Aposta salva no Supabase para o concurso #${concVal}!`);
       }
 
       function quickBet() {
@@ -3057,9 +3281,12 @@
         }
       }
 
-      function deleteBet(id) {
+      async function deleteBet(id) {
+        try {
+          await sb.from("apostas").delete().eq("id", id);
+        } catch(_) {}
         APOSTAS = APOSTAS.filter((a) => a.id !== id);
-        saveApostasToStorage();
+        await saveApostasToStorage();
         renderApostasUI();
       }
 
@@ -3376,10 +3603,11 @@
         Notification.requestPermission();
 
       // ── INIT ──
-      loadMJFromStorage();
-      loadApostasFromStorage();
-      renderMJInputs();
-      renderApostasUI();
+      (async () => {
+        await loadMJFromStorage();
+        renderMJInputs();
+        await loadApostasFromStorage();
+      })();
       (async () => {
         // 1) Carrega dados estáticos (instantâneo, funciona no GitHub Pages)
         const hasStatic = await loadStatic();
