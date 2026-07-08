@@ -1,7 +1,35 @@
 {
-  "generatedAt": "2026-07-05T13:15:41.514Z",
-  "total": 3027,
+  "generatedAt": "2026-07-08T13:47:01.129Z",
+  "total": 3028,
   "results": [
+    {
+      "concurso": 3028,
+      "data": "07/07/2026",
+      "dezenas": [
+        2,
+        10,
+        11,
+        25,
+        51,
+        56
+      ],
+      "ganhadores": 0,
+      "premio": 0,
+      "acumulado": true,
+      "premioTotalSena": 0,
+      "arrecadacao": 45482292,
+      "acumuladoProx": 37591243.53,
+      "estimativaProx": 45000000,
+      "quina": {
+        "ganhadores": 61,
+        "premio": 29711.79
+      },
+      "quadra": {
+        "ganhadores": 4012,
+        "premio": 744.64
+      },
+      "cidades": []
+    },
     {
       "concurso": 3027,
       "data": "04/07/2026",
