@@ -1998,8 +1998,8 @@
 
       // ── Supabase ──
       const SUPABASE_URL = "https://diyptbtsaqfjnucwakpn.supabase.co";
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeXB0YnRzYXFmam51Y3dha3BuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MzYyNDUsImV4cCI6MjA5OTExMjI0NX0.GCdAm3x6X-LDX6PCQBCBg7IkS8Xyt-Aarci8pS4L588";
-      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_WS90FW35z-M4rTIMCTZ6Kw_ucQBel-c";
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
       let currentUser = null;
 
       function setAuthUI(user) {
