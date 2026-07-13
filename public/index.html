@@ -1234,6 +1234,21 @@
     </style>
   </head>
   <body>
+    <!-- ══════════ AUTH MODAL ══════════ -->
+    <div id="authModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+      <div class="card" style="width:100%; max-width:400px; padding:30px; text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <div style="font-size:40px; margin-bottom:10px;">&#128274;</div>
+        <h2 style="margin-bottom:5px;">Acesso ao Dashboard</h2>
+        <p style="color:var(--muted); font-size:13px; margin-bottom:20px;">Faça login para salvar seus jogos na nuvem de forma privada</p>
+        <input type="email" id="authEmail" class="ap-input" placeholder="Seu E-mail" style="width:100%; margin-bottom:10px;">
+        <input type="password" id="authPass" class="ap-input" placeholder="Sua Senha" style="width:100%; margin-bottom:20px;">
+        <div style="display:flex; gap:10px;">
+          <button class="btn btnp" onclick="doAuth('login')" style="flex:1;">&#128273; Entrar</button>
+          <button class="btn btno" onclick="doAuth('register')" style="flex:1;">Cadastrar</button>
+        </div>
+        <div id="authMsg" style="margin-top:15px; font-size:13px; font-weight:bold; color:var(--red);"></div>
+      </div>
+    </div>
     <header>
       <div class="logo">
         <div style="font-size: 22px">&#127920;</div>
@@ -1246,7 +1261,13 @@
           <span id="stxt">Conectando...</span>
         </div>
       </div>
-      <div id="uptime">Carregando...</div>
+      <div style="display:flex; gap:15px; align-items:center;">
+        <div id="uptime">Carregando...</div>
+        <div id="userAuthSect" style="display:none; align-items:center; gap:8px;">
+          <span id="userEmailDisplay" style="font-size:11px; color:var(--cyan); font-weight:bold;"></span>
+          <button class="btn btno" style="padding:4px 8px; font-size:10px;" onclick="doLogout()">Sair</button>
+        </div>
+      </div>
       <button class="hbtn" onclick="startFetch()">
         &#128229; Buscar histórico completo (1996 → hoje)
       </button>
@@ -1257,6 +1278,7 @@
       <div class="ntab" onclick="showTab('apostas', this)">&#128176; Minhas Apostas</div>
       <div class="ntab" onclick="showTab('deep', this)">&#128300; Análise Profunda</div>
       <div class="ntab" onclick="showTab('hist', this)">&#128203; Histórico</div>
+      <div class="ntab" onclick="showTab('desd', this)">&#128274; Desdobramentos</div>
     </nav>
     <div id="fbar">
       <div id="flabel">Aguardando...</div>
@@ -1333,6 +1355,19 @@
             >
               Calculando sugestões...
             </div>
+          </div>
+
+          <div style="margin-top: 24px">
+            <div style="font-size: 15px; font-weight: 800; margin-bottom: 4px">
+              ✨ Mais estratégias (extras)
+            </div>
+            <div
+              style="font-size: 11px; color: var(--muted); font-style: italic; margin-bottom: 12px"
+            >
+              Outras combinações baseadas em estatísticas diferentes — apenas
+              exibição, não entram no histórico rastreado acima.
+            </div>
+            <div class="sgrid" id="sCdsExtra"></div>
           </div>
         </div>
 
@@ -1684,22 +1719,32 @@
         </div>
 
         <!-- Resumo -->
-        <div class="ap-summary" id="apSummary">
-          <div class="ap-sum-card">
-            <div class="ap-sum-val" id="apTotalBets" style="color:var(--green)">0</div>
-            <div class="ap-sum-lbl">Total de apostas</div>
+        <!-- Calculadora de ROI (Substitui o sumário antigo) -->
+        <div class="card" style="margin-bottom:20px; background:var(--bg3);">
+          <div class="sec" style="margin-bottom:12px; text-align:center;">Resumo Financeiro (ROI)</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <div class="ap-sum-card" style="flex:1; border:1px solid var(--border);">
+              <div class="ap-sum-val" id="apSpent" style="color:var(--red)">R$ 0</div>
+              <div class="ap-sum-lbl">Total Investido</div>
+            </div>
+            <div class="ap-sum-card" style="flex:1; border:1px solid var(--border);">
+              <div class="ap-sum-val" id="apWon" style="color:var(--green)">R$ 0</div>
+              <div class="ap-sum-lbl">Prêmios Ganhos</div>
+            </div>
+            <div class="ap-sum-card" style="flex:1; border:1px solid var(--border);">
+              <div class="ap-sum-val" id="apNet" style="color:var(--gold)">R$ 0</div>
+              <div class="ap-sum-lbl">Lucro Líquido</div>
+            </div>
           </div>
-          <div class="ap-sum-card">
-            <div class="ap-sum-val" id="apBestResult" style="color:var(--gold)">—</div>
-            <div class="ap-sum-lbl">Melhor resultado</div>
-          </div>
-          <div class="ap-sum-card">
-            <div class="ap-sum-val" id="apWinCount" style="color:var(--cyan)">0</div>
-            <div class="ap-sum-lbl">Quadras+ ganhas</div>
-          </div>
-          <div class="ap-sum-card">
-            <div class="ap-sum-val" id="apSpent" style="color:var(--orange)">R$ 0</div>
-            <div class="ap-sum-lbl">Investido (est.)</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <div class="ap-sum-card" style="flex:1; padding:10px;">
+              <div class="ap-sum-val" id="apTotalBets" style="font-size:16px;">0</div>
+              <div class="ap-sum-lbl">Apostas Salvas</div>
+            </div>
+            <div class="ap-sum-card" style="flex:1; padding:10px;">
+              <div class="ap-sum-val" id="apBestResult" style="font-size:16px; color:var(--cyan)">—</div>
+              <div class="ap-sum-lbl">Melhor Resultado</div>
+            </div>
           </div>
         </div>
 
@@ -1732,6 +1777,26 @@
           <div style="font-size:40px;margin-bottom:12px">&#127915;</div>
           <div>Nenhuma aposta registrada ainda</div>
           <div style="font-size:11px;margin-top:6px;color:var(--dim)">Use o formulário acima para registrar suas apostas</div>
+        </div>
+      </div>
+
+      <!-- ══════════ DESDOBRAMENTOS ══════════ -->
+      <div class="pane" id="tab-desd">
+        <div class="mji">
+          <h2>&#128274; Desdobramentos Matemáticos</h2>
+          <p>Selecione de 7 a 15 dezenas. O sistema gerará as combinações (fechamento completo) garantindo a quadra/quina/sena caso os sorteados estejam entre os escolhidos.</p>
+        </div>
+        <div class="card">
+          <div id="desdGrid" style="display:grid; grid-template-columns:repeat(10, 1fr); gap:5px; margin-bottom:20px;"></div>
+          <div style="background:var(--bg2); padding:16px; border-radius:var(--radius); text-align:center; border:1px solid var(--border);">
+            <div style="font-size:20px; font-weight:800; font-family:var(--mono); color:var(--cyan);" id="desdQtd">0 cartões</div>
+            <div style="font-size:14px; color:var(--red); margin-bottom:15px;" id="desdCost">Custo total: R$ 0,00</div>
+            <div style="display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap;">
+               <input type="number" id="desdConc" class="ap-input" placeholder="Concurso Alvo" style="width:140px;">
+               <button class="btn btnp" id="desdBtn" onclick="gerarDesdobramento()" disabled>Gerar e Salvar em Minhas Apostas</button>
+               <button class="btn btno" onclick="desdSelected.clear(); renderDesdGrid();">&#128465; Limpar</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2256,8 +2321,99 @@
           },
         ].sort((a, b) => b.score - a.score);
       }
+      // ── Estratégias extras (display-only, não entram no histórico) ──
+      function genExtraSugs(stats) {
+        if (!stats || !stats.freq) return [];
+        const freq = [0, ...stats.freq];
+        const decOf = (n) => Math.floor((n - 1) / 10);
+        const sortN = (a) => [...a].sort((x, y) => x - y);
+        const nums = Array.from({ length: 60 }, (_, i) => i + 1);
+        const byFreq = [...nums].sort((a, b) => freq[b] - freq[a]);
+        const cap2 = (arr, n) =>
+          !arr.includes(n) &&
+          arr.filter((x) => decOf(x) === decOf(n)).length < 2;
+
+        // 1) Ciclo de dezenas — o mais frequente de cada faixa (1 por década)
+        const ciclo = [];
+        for (let d = 0; d < 6; d++) {
+          const best = byFreq.find((n) => decOf(n) === d);
+          if (best) ciclo.push(best);
+        }
+
+        // 2) Duplas quentes — a partir dos pares que mais saem juntos
+        const duplas = [];
+        for (const p of stats.topPairs || []) {
+          const par = String(p.pair).split("-").map(Number);
+          for (const n of par)
+            if (duplas.length < 6 && cap2(duplas, n)) duplas.push(n);
+          if (duplas.length >= 6) break;
+        }
+        for (const n of byFreq)
+          if (duplas.length < 6 && cap2(duplas, n)) duplas.push(n);
+
+        // 3) Equilíbrio baixos × altos — 3 mais frequentes de cada lado
+        const equi = [];
+        for (const n of byFreq.filter((x) => x <= 30))
+          if (equi.filter((x) => x <= 30).length < 3 && cap2(equi, n))
+            equi.push(n);
+        for (const n of byFreq.filter((x) => x > 30))
+          if (equi.filter((x) => x > 30).length < 3 && cap2(equi, n))
+            equi.push(n);
+
+        // 4) Surpresinha ponderada — aleatória, mas pesada pela frequência
+        const totalF = freq.reduce((a, b) => a + b, 0);
+        const surp = [];
+        let guard = 0;
+        while (surp.length < 6 && guard++ < 3000) {
+          let r = Math.random() * totalF,
+            n = 1;
+          for (; n <= 60; n++) {
+            r -= freq[n];
+            if (r <= 0) break;
+          }
+          if (n <= 60 && cap2(surp, n)) surp.push(n);
+        }
+
+        return [
+          { nums: sortN(ciclo), strat: "Ciclo de dezenas", desc: "O nº mais sorteado de cada faixa (01–10 … 51–60)", color: "#8b5cf6" },
+          { nums: sortN(duplas), strat: "Duplas quentes", desc: "A partir dos pares que mais saem juntos", color: "#ec4899" },
+          { nums: sortN(equi), strat: "Equilíbrio baixos × altos", desc: "3 baixos + 3 altos mais frequentes", color: "#06b6d4" },
+          { nums: sortN(surp), strat: "Surpresinha ponderada", desc: "Aleatória, ponderada pela frequência histórica", color: "#f59e0b" },
+        ].filter((s) => s.nums.length === 6);
+      }
+
+      function renderExtraSugs(stats) {
+        const el = document.getElementById("sCdsExtra");
+        if (!el) return;
+        el.innerHTML = genExtraSugs(stats)
+          .map((s) => {
+            const sum = s.nums.reduce((a, b) => a + b, 0),
+              ev = s.nums.filter((n) => n % 2 === 0).length,
+              lw = s.nums.filter((n) => n <= 30).length;
+            const balls = s.nums
+              .map(
+                (n, idx) =>
+                  `<div class="ball" style="background:${BC[idx]}">${fmt(n)}</div>`,
+              )
+              .join("");
+            return `<div class="sc">
+      <div class="sstrat" style="color:${s.color}">${s.strat}</div>
+      <div style="font-size:11px;color:var(--muted);margin:-4px 0 10px">${s.desc}</div>
+      <div class="sballs">${balls}</div>
+      <div class="tags">
+        <span class="tag tg">Soma: ${sum}</span>
+        <span class="tag tb">P:${ev}/I:${6 - ev}</span>
+        <span class="tag to">B:${lw}/A:${6 - lw}</span>
+        <span class="tag tp">${s.nums.map(fmt).join("·")}</span>
+      </div>
+    </div>`;
+          })
+          .join("");
+      }
+
       function renderSugs(stats, results, lc) {
         const sugs = genSugs(stats, results);
+        renderExtraSugs(stats);
         const nextConc = lc + 1;
         const sc = ["s1", "s2", "s3"],
           bc = ["b1", "b2", "b3"],
