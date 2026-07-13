@@ -1241,14 +1241,26 @@
         <div style="font-size:40px; margin-bottom:10px;">&#128274;</div>
         <h2 style="margin-bottom:5px;">Acesso ao Dashboard</h2>
         <p style="color:var(--muted); font-size:13px; margin-bottom:20px;">Faça login para salvar seus jogos na nuvem de forma privada</p>
-        <input type="email" id="authEmail" class="ap-input" placeholder="Seu E-mail" style="width:100%; margin-bottom:10px;">
-        <input type="password" id="authPass" class="ap-input" placeholder="Sua Senha" style="width:100%; margin-bottom:20px;">
+        <input type="email" id="authEmail" class="ap-input" placeholder="Seu E-mail" autocomplete="email" style="width:100%; margin-bottom:10px;">
+        <input type="password" id="authPass" class="ap-input" placeholder="Sua Senha" autocomplete="current-password" style="width:100%; margin-bottom:20px;">
         <div style="display:flex; gap:10px;">
           <button class="btn btnp" onclick="doAuth('login')" style="flex:1;">&#128273; Entrar</button>
           <button class="btn btno" onclick="doAuth('register')" style="flex:1;">Cadastrar</button>
         </div>
+        <button class="btn btno" onclick="requestPasswordReset()" style="width:100%; margin-top:10px;">Esqueci minha senha</button>
         <button class="btn btno" onclick="continueAsGuest()" style="width:100%; margin-top:10px;">Continuar sem conta</button>
         <div id="authMsg" style="margin-top:15px; font-size:13px; font-weight:bold; color:var(--red);"></div>
+      </div>
+    </div>
+    <div id="resetPasswordModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+      <div class="card" style="width:100%; max-width:400px; padding:30px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        <div style="font-size:40px; margin-bottom:10px;">&#128273;</div>
+        <h2 style="margin-bottom:5px;">Definir nova senha</h2>
+        <p style="color:var(--muted); font-size:13px; margin-bottom:20px;">Escolha uma senha com pelo menos 6 caracteres.</p>
+        <input type="password" id="newPassword" class="ap-input" placeholder="Nova senha" autocomplete="new-password" style="width:100%; margin-bottom:10px;">
+        <input type="password" id="confirmNewPassword" class="ap-input" placeholder="Confirmar nova senha" autocomplete="new-password" style="width:100%; margin-bottom:20px;">
+        <button class="btn btnp" onclick="updatePassword()" style="width:100%;">Salvar nova senha</button>
+        <div id="resetPasswordMsg" style="margin-top:15px; font-size:13px; font-weight:bold; color:var(--red);"></div>
       </div>
     </div>
     <header>
@@ -2031,7 +2043,9 @@
           ? await sb.auth.signUp({ email, password })
           : await sb.auth.signInWithPassword({ email, password });
         if (result.error) {
-          message.textContent = result.error.message;
+          message.textContent = result.error.message === "Invalid login credentials"
+            ? "E-mail ou senha incorretos. Use 'Esqueci minha senha' para recuperar o acesso."
+            : result.error.message;
           return;
         }
         if (mode === "register" && !result.data.session) {
@@ -2040,6 +2054,60 @@
           return;
         }
         message.textContent = "";
+      }
+
+      async function requestPasswordReset() {
+        const emailInput = document.getElementById("authEmail");
+        const email = emailInput.value.trim();
+        const message = document.getElementById("authMsg");
+        message.style.color = "var(--red)";
+        if (!email || !emailInput.checkValidity()) {
+          message.textContent = "Informe um e-mail válido para recuperar a senha.";
+          return;
+        }
+        message.textContent = "Enviando link de recuperação...";
+        const redirectTo = `${window.location.origin}${window.location.pathname}`;
+        const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+        if (error) {
+          message.textContent = error.message;
+          return;
+        }
+        message.style.color = "var(--green)";
+        message.textContent = "Se a conta existir, o link para criar uma nova senha chegará por e-mail.";
+      }
+
+      function showResetPasswordModal() {
+        document.getElementById("authModal").style.display = "none";
+        document.getElementById("resetPasswordModal").style.display = "flex";
+        document.getElementById("newPassword").focus();
+      }
+
+      async function updatePassword() {
+        const password = document.getElementById("newPassword").value;
+        const confirmation = document.getElementById("confirmNewPassword").value;
+        const message = document.getElementById("resetPasswordMsg");
+        message.style.color = "var(--red)";
+        if (password.length < 6) {
+          message.textContent = "A nova senha deve ter pelo menos 6 caracteres.";
+          return;
+        }
+        if (password !== confirmation) {
+          message.textContent = "As senhas não coincidem.";
+          return;
+        }
+        message.textContent = "Salvando nova senha...";
+        const { error } = await sb.auth.updateUser({ password });
+        if (error) {
+          message.textContent = error.message;
+          return;
+        }
+        message.style.color = "var(--green)";
+        message.textContent = "Senha atualizada com sucesso.";
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setTimeout(() => {
+          document.getElementById("resetPasswordModal").style.display = "none";
+          showToast("Senha atualizada. Você já está conectado.");
+        }, 800);
       }
 
       async function doLogout() {
@@ -2063,9 +2131,16 @@
       async function initAuth() {
         const { data } = await sb.auth.getSession();
         setAuthUI(data.session?.user || null);
+        const isRecoveryLink = new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery";
+        if (isRecoveryLink && data.session) showResetPasswordModal();
         await reloadUserData();
-        sb.auth.onAuthStateChange((_event, session) => {
+        sb.auth.onAuthStateChange((event, session) => {
           const nextUser = session?.user || null;
+          if (event === "PASSWORD_RECOVERY") {
+            setAuthUI(nextUser);
+            showResetPasswordModal();
+            return;
+          }
           if (nextUser?.id === currentUser?.id) return;
           setAuthUI(nextUser);
           setTimeout(reloadUserData, 0);
