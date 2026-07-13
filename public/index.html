@@ -1277,6 +1277,7 @@
       <div class="ntab" onclick="showTab('mj', this)">&#127919; Meus Jogos</div>
       <div class="ntab" onclick="showTab('apostas', this)">&#128176; Minhas Apostas</div>
       <div class="ntab" onclick="showTab('deep', this)">&#128300; Análise Profunda</div>
+      <div class="ntab" onclick="showTab('histsug', this)">&#128202; Sugestões &times; Real</div>
       <div class="ntab" onclick="showTab('hist', this)">&#128203; Histórico</div>
       <div class="ntab" onclick="showTab('desd', this)">&#128274; Desdobramentos</div>
     </nav>
@@ -1371,18 +1372,7 @@
           </div>
         </div>
 
-        <!-- 📊 Histórico de Sugestões -->
-        <div style="margin-bottom: 20px">
-          <div style="font-size: 18px; font-weight: 800; margin-bottom: 16px;">
-            📊 Histórico de Sugestões x Resultados Reais
-          </div>
-          <div class="ap-summary" id="sugHistStats" style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
-            <div style="text-align:center;padding:20px;color:var(--muted);width:100%">Carregando estatísticas...</div>
-          </div>
-          <div id="sugHistList">
-             <div style="text-align:center;padding:20px;color:var(--muted)">Carregando histórico...</div>
-          </div>
-        </div>
+        <!-- (Histórico de Sugestões foi movido para a aba própria "Sugestões × Real") -->
         <div class="g2">
           <div class="card">
             <div class="sec">Frequência dos 60 números</div>
@@ -1781,10 +1771,28 @@
       </div>
 
       <!-- ══════════ DESDOBRAMENTOS ══════════ -->
+      <!-- ══════════ SUGESTÕES × RESULTADOS ══════════ -->
+      <div class="pane" id="tab-histsug">
+        <div style="margin-bottom: 20px">
+          <div style="font-size: 18px; font-weight: 800; margin-bottom: 4px;">
+            📊 Histórico de Sugestões x Resultados Reais
+          </div>
+          <div style="font-size: 12px; color: var(--muted); font-style: italic; margin-bottom: 16px;">
+            Compara as 3 sugestões geradas em cada concurso com o resultado oficial. Lembre: a Mega-Sena é aleatória — isto é acompanhamento, não previsão.
+          </div>
+          <div class="ap-summary" id="sugHistStats" style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+            <div style="text-align:center;padding:20px;color:var(--muted);width:100%">Carregando estatísticas...</div>
+          </div>
+          <div id="sugHistList">
+             <div style="text-align:center;padding:20px;color:var(--muted)">Carregando histórico...</div>
+          </div>
+        </div>
+      </div>
+
       <div class="pane" id="tab-desd">
         <div class="mji">
           <h2>&#128274; Desdobramentos Matemáticos</h2>
-          <p>Selecione de 7 a 15 dezenas. O sistema gerará as combinações (fechamento completo) garantindo a quadra/quina/sena caso os sorteados estejam entre os escolhidos.</p>
+          <p>Selecione de 7 a 15 dezenas. O sistema gera o <b>fechamento completo</b> (todas as combinações de 6). Assim, se 4, 5 ou 6 das dezenas sorteadas estiverem entre as suas, a quadra/quina/sena fica garantida em algum cartão. Mais dezenas = mais chance <b>e</b> mais custo.</p>
         </div>
         <div class="card">
           <div id="desdGrid" style="display:grid; grid-template-columns:repeat(10, 1fr); gap:5px; margin-bottom:20px;"></div>
@@ -1797,6 +1805,10 @@
                <button class="btn btno" onclick="desdSelected.clear(); renderDesdGrid();">&#128465; Limpar</button>
             </div>
           </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="sec">🎯 Modo garantia — o que este fechamento cobre</div>
+          <div id="desdGarantia"></div>
         </div>
       </div>
 
@@ -3761,11 +3773,177 @@
       if ("Notification" in window && Notification.permission === "default")
         Notification.requestPermission();
 
+      // ═══════ DESDOBRAMENTOS ═══════
+      const desdSelected = new Set();
+      const DESD_MIN = 7,
+        DESD_MAX = 15,
+        PRECO_JOGO = 5;
+
+      function combCount(n, k) {
+        if (k < 0 || k > n) return 0;
+        let r = 1;
+        for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1);
+        return Math.round(r);
+      }
+
+      function getCombinations(arr, k) {
+        const res = [];
+        const cur = [];
+        (function go(start) {
+          if (cur.length === k) {
+            res.push(cur.slice());
+            return;
+          }
+          for (let i = start; i < arr.length; i++) {
+            cur.push(arr[i]);
+            go(i + 1);
+            cur.pop();
+          }
+        })(0);
+        return res;
+      }
+
+      function renderDesdGrid() {
+        const grid = document.getElementById("desdGrid");
+        if (!grid) return;
+        let html = "";
+        for (let n = 1; n <= 60; n++) {
+          const on = desdSelected.has(n);
+          html += `<div onclick="toggleDesd(${n})" style="cursor:pointer;user-select:none;text-align:center;padding:9px 0;border-radius:8px;font-weight:700;font-family:var(--mono);font-size:13px;transition:.12s;border:1px solid ${on ? "transparent" : "var(--border)"};background:${on ? "var(--green)" : "var(--bg2)"};color:${on ? "#04110b" : "var(--text)"}">${fmt(n)}</div>`;
+        }
+        grid.innerHTML = html;
+        updateDesdInfo();
+      }
+
+      function toggleDesd(n) {
+        if (desdSelected.has(n)) desdSelected.delete(n);
+        else {
+          if (desdSelected.size >= DESD_MAX) {
+            showToast(`⚠️ Máximo de ${DESD_MAX} dezenas por fechamento.`);
+            return;
+          }
+          desdSelected.add(n);
+        }
+        renderDesdGrid();
+      }
+
+      function updateDesdInfo() {
+        const k = desdSelected.size;
+        const cartoes = k >= 6 ? combCount(k, 6) : 0;
+        const custo = cartoes * PRECO_JOGO;
+        document.getElementById("desdQtd").textContent =
+          `${cartoes.toLocaleString("pt-BR")} cartões · ${k} dezenas`;
+        document.getElementById("desdCost").textContent =
+          `Custo total: R$ ${custo.toLocaleString("pt-BR")},00`;
+        const btn = document.getElementById("desdBtn");
+        if (btn) btn.disabled = !(k >= DESD_MIN && k <= DESD_MAX);
+        renderDesdGarantia(k);
+      }
+
+      // Modo garantia — probabilidade (hipergeométrica) de o fechamento
+      // efetivamente garantir quadra/quina/sena, comparado a 1 jogo simples.
+      function renderDesdGarantia(k) {
+        const el = document.getElementById("desdGarantia");
+        if (!el) return;
+        if (k < 6) {
+          el.innerHTML = `<div style="color:var(--muted);font-style:italic;text-align:center;padding:14px">Selecione ${DESD_MIN}–${DESD_MAX} dezenas para ver o que o fechamento garante.</div>`;
+          return;
+        }
+        const total = combCount(60, 6); // 50.063.860
+        // P(exatamente j dos 6 sorteados estão entre as suas k dezenas)
+        const hyper = (j) => (combCount(k, j) * combCount(60 - k, 6 - j)) / total;
+        const pQuadra = hyper(4) + hyper(5) + hyper(6);
+        const pQuina = hyper(5) + hyper(6);
+        const pSena = hyper(6);
+        // referência: 1 jogo simples de 6 dezenas
+        const sQuadra = (combCount(6, 4) * combCount(54, 2)) / total;
+        const sQuina = (combCount(6, 5) * combCount(54, 1)) / total;
+        const sSena = 1 / total;
+
+        const odds = (p) => (p > 0 ? `1 em ${Math.round(1 / p).toLocaleString("pt-BR")}` : "—");
+        const pct = (p) => (p <= 0 ? "0%" : (p * 100 < 0.01 ? (p * 100).toFixed(4) : (p * 100).toFixed(2)) + "%");
+        const mult = (p, s) => (s > 0 && p > 0 ? `${(p / s).toFixed(1)}×` : "—");
+
+        const linha = (nome, cor, p, s) => `
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--dim)">
+            <div style="flex:none;width:70px;font-weight:800;color:${cor}">${nome}</div>
+            <div style="flex:1">
+              <div style="font-size:13px">${pct(p)} <span style="color:var(--muted)">(${odds(p)})</span></div>
+              <div style="font-size:10px;color:var(--muted)">1 jogo simples: ${pct(s)} → seu fechamento é <b style="color:${cor}">${mult(p, s)}</b> mais provável</div>
+            </div>
+          </div>`;
+
+        el.innerHTML = `
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">
+            Probabilidade de <b>pelo menos</b> essa quantidade das 6 dezenas sorteadas cair entre as suas <b>${k}</b> — o que garante o prêmio em algum cartão:
+          </div>
+          ${linha("Quadra", "var(--cyan)", pQuadra, sQuadra)}
+          ${linha("Quina", "var(--gold)", pQuina, sQuina)}
+          ${linha("Sena", "var(--green)", pSena, sSena)}
+          <div style="font-size:11px;color:var(--muted);margin-top:10px;font-style:italic">
+            ⚠️ Jogar mais dezenas aumenta a chance porque você compra mais combinações — a probabilidade por real gasto <b>não</b> melhora. A Mega-Sena é aleatória.
+          </div>`;
+      }
+
+      async function gerarDesdobramento() {
+        const k = desdSelected.size;
+        if (k < DESD_MIN || k > DESD_MAX) return;
+        const conc = parseInt(document.getElementById("desdConc").value);
+        if (!conc || conc < 1) {
+          showToast("⚠️ Informe o concurso alvo.");
+          return;
+        }
+        const pool = [...desdSelected].sort((a, b) => a - b);
+        const combos = getCombinations(pool, 6);
+        const custo = combos.length * PRECO_JOGO;
+        if (
+          !confirm(
+            `Gerar ${combos.length} cartões (R$ ${custo.toLocaleString("pt-BR")},00) para o concurso #${conc} e salvar em Minhas Apostas?`,
+          )
+        )
+          return;
+
+        const rows = combos.map((dz) => ({ concurso: conc, dezenas: dz }));
+        let salvouNaNuvem = false;
+        try {
+          const { data, error } = await sb.from("apostas").insert(rows).select("*");
+          if (!error && data && data.length) {
+            data.forEach((d) =>
+              APOSTAS.push({
+                id: d.id,
+                concurso: d.concurso,
+                dezenas: d.dezenas,
+                createdAt: d.created_at,
+              }),
+            );
+            salvouNaNuvem = true;
+          }
+        } catch (_) {}
+        if (!salvouNaNuvem) {
+          combos.forEach((dz, i) =>
+            APOSTAS.push({
+              id: Date.now() + i,
+              concurso: conc,
+              dezenas: dz,
+              createdAt: new Date().toISOString(),
+            }),
+          );
+        }
+        await saveApostasToStorage();
+        renderApostasUI();
+        desdSelected.clear();
+        renderDesdGrid();
+        showToast(
+          `✅ ${combos.length} cartões gerados para #${conc}${salvouNaNuvem ? " (salvos na nuvem)" : " (salvos localmente)"}!`,
+        );
+      }
+
       // ── INIT ──
       (async () => {
         await loadMJFromStorage();
         renderMJInputs();
         await loadApostasFromStorage();
+        renderDesdGrid();
       })();
       (async () => {
         // 1) Carrega dados estáticos (instantâneo, funciona no GitHub Pages)
