@@ -5,6 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "test": "node --test",
+    "check": "node --check server.js && node --check update.js && node --check build.js && node --test",
     "fetch": "node fetch-history.js",
     "enrich": "node fetch-history.js --enrich",
     "update": "node update.js",

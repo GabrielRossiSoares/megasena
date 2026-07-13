@@ -11,6 +11,7 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="./lottery.js"></script>
     <style>
       :root {
         --bg: #080b14;
@@ -1246,6 +1247,7 @@
           <button class="btn btnp" onclick="doAuth('login')" style="flex:1;">&#128273; Entrar</button>
           <button class="btn btno" onclick="doAuth('register')" style="flex:1;">Cadastrar</button>
         </div>
+        <button class="btn btno" onclick="continueAsGuest()" style="width:100%; margin-top:10px;">Continuar sem conta</button>
         <div id="authMsg" style="margin-top:15px; font-size:13px; font-weight:bold; color:var(--red);"></div>
       </div>
     </div>
@@ -1998,6 +2000,77 @@
       const SUPABASE_URL = "https://diyptbtsaqfjnucwakpn.supabase.co";
       const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeXB0YnRzYXFmam51Y3dha3BuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MzYyNDUsImV4cCI6MjA5OTExMjI0NX0.GCdAm3x6X-LDX6PCQBCBg7IkS8Xyt-Aarci8pS4L588";
       const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      let currentUser = null;
+
+      function setAuthUI(user) {
+        currentUser = user || null;
+        const modal = document.getElementById("authModal");
+        const userSection = document.getElementById("userAuthSect");
+        const email = document.getElementById("userEmailDisplay");
+        modal.style.display = user ? "none" : "flex";
+        userSection.style.display = user ? "flex" : "none";
+        email.textContent = user?.email || "";
+      }
+
+      function continueAsGuest() {
+        document.getElementById("authModal").style.display = "none";
+        showToast("Modo visitante: os dados ficam somente neste navegador.");
+      }
+
+      async function doAuth(mode) {
+        const email = document.getElementById("authEmail").value.trim();
+        const password = document.getElementById("authPass").value;
+        const message = document.getElementById("authMsg");
+        message.style.color = "var(--red)";
+        if (!email || password.length < 6) {
+          message.textContent = "Informe um e-mail válido e uma senha com pelo menos 6 caracteres.";
+          return;
+        }
+        message.textContent = "Aguarde...";
+        const result = mode === "register"
+          ? await sb.auth.signUp({ email, password })
+          : await sb.auth.signInWithPassword({ email, password });
+        if (result.error) {
+          message.textContent = result.error.message;
+          return;
+        }
+        if (mode === "register" && !result.data.session) {
+          message.style.color = "var(--green)";
+          message.textContent = "Cadastro criado. Confirme o e-mail para entrar.";
+          return;
+        }
+        message.textContent = "";
+      }
+
+      async function doLogout() {
+        await sb.auth.signOut();
+        showToast("Sessão encerrada. O modo visitante continua disponível.");
+      }
+
+      async function reloadUserData() {
+        MJ_DB_ID = null;
+        MJG = [Array(6).fill("")];
+        APOSTAS = [];
+        await loadMJFromStorage();
+        renderMJInputs();
+        await loadApostasFromStorage();
+        if (CUR) {
+          verificarAcertosSugestoes(CUR.results || []);
+          renderSugHistory();
+        }
+      }
+
+      async function initAuth() {
+        const { data } = await sb.auth.getSession();
+        setAuthUI(data.session?.user || null);
+        await reloadUserData();
+        sb.auth.onAuthStateChange((_event, session) => {
+          const nextUser = session?.user || null;
+          if (nextUser?.id === currentUser?.id) return;
+          setAuthUI(nextUser);
+          setTimeout(reloadUserData, 0);
+        });
+      }
 
       // ── localStorage keys (fallback) ──
       const LS_MJ = "megasena_meus_jogos";
@@ -2461,21 +2534,24 @@
       }
 
       async function saveSugestoes(concurso, sugs) {
+        if (!currentUser) return;
         try {
           const payload = sugs.map(s => ({ nums: s.nums, strat: s.strat, score: s.score }));
-          const { data: existing } = await sb.from("sugestoes_historico").select("id,resultado").eq("concurso", concurso).maybeSingle();
+          const { data: existing } = await sb.from("sugestoes_historico").select("id,resultado").eq("user_id", currentUser.id).eq("concurso", concurso).maybeSingle();
           if (!existing) {
-            await sb.from("sugestoes_historico").insert({ concurso, sugestoes: payload });
+            await sb.from("sugestoes_historico").insert({ user_id: currentUser.id, concurso, sugestoes: payload });
           }
           // Se já existir, não sobrescreve (mantém resultado se já foi verificado)
         } catch (e) { /* ignore */ }
       }
 
       async function verificarAcertosSugestoes(results) {
+        if (!currentUser) return;
         try {
           const { data: pendentes, error } = await sb
             .from("sugestoes_historico")
             .select("*")
+            .eq("user_id", currentUser.id)
             .is("resultado", null);
           if (error || !pendentes || !pendentes.length) return;
           const updates = [];
@@ -2490,7 +2566,7 @@
                 resultado,
                 acertos,
                 verificado_em: new Date().toISOString(),
-              }).eq("id", sug.id)
+              }).eq("id", sug.id).eq("user_id", currentUser.id)
             );
           }
           if (updates.length) await Promise.all(updates);
@@ -2502,10 +2578,16 @@
         const el = document.getElementById("sugHistList");
         const statsEl = document.getElementById("sugHistStats");
         if (!el) return;
+        if (!currentUser) {
+          el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted)">Entre em uma conta para acompanhar seu histórico de sugestões.</div>`;
+          if (statsEl) statsEl.innerHTML = "";
+          return;
+        }
         try {
           const { data, error } = await sb
             .from("sugestoes_historico")
             .select("*")
+            .eq("user_id", currentUser.id)
             .not("resultado", "is", null)
             .order("concurso", { ascending: false })
             .limit(30);
@@ -3007,8 +3089,20 @@
       let MJG = [Array(6).fill("")];
 
       async function loadMJFromStorage() {
+        const stored = localStorage.getItem(LS_MJ);
+        const loadLocal = () => {
+          if (!stored) return;
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length) MJG = parsed;
+          } catch (_) {}
+        };
+        if (!currentUser) {
+          loadLocal();
+          return;
+        }
         try {
-          const { data, error } = await sb.from("meus_jogos").select("id,jogos").order("id", { ascending: false }).limit(1);
+          const { data, error } = await sb.from("meus_jogos").select("id,jogos").eq("user_id", currentUser.id).limit(1);
           if (!error && data && data.length > 0) {
             const parsed = data[0].jogos;
             if (Array.isArray(parsed) && parsed.length > 0) {
@@ -3016,13 +3110,10 @@
               MJ_DB_ID = data[0].id;
             }
           } else {
-            // fallback localStorage
-            const stored = localStorage.getItem(LS_MJ);
-            if (stored) { const p = JSON.parse(stored); if (Array.isArray(p) && p.length) MJG = p; }
+            loadLocal();
           }
         } catch (e) {
-          const stored = localStorage.getItem(LS_MJ);
-          if (stored) { try { const p = JSON.parse(stored); if (Array.isArray(p) && p.length) MJG = p; } catch(_) {} }
+          loadLocal();
         }
       }
 
@@ -3030,10 +3121,11 @@
       async function saveMJToStorage() {
         try {
           localStorage.setItem(LS_MJ, JSON.stringify(MJG));
+          if (!currentUser) return;
           if (MJ_DB_ID) {
-            await sb.from("meus_jogos").update({ jogos: MJG, updated_at: new Date().toISOString() }).eq("id", MJ_DB_ID);
+            await sb.from("meus_jogos").update({ jogos: MJG, updated_at: new Date().toISOString() }).eq("id", MJ_DB_ID).eq("user_id", currentUser.id);
           } else {
-            const { data } = await sb.from("meus_jogos").insert({ jogos: MJG }).select("id");
+            const { data } = await sb.from("meus_jogos").insert({ user_id: currentUser.id, jogos: MJG }).select("id");
             if (data && data[0]) MJ_DB_ID = data[0].id;
           }
         } catch (e) { /* ignore */ }
@@ -3367,8 +3459,21 @@
       let APOSTAS = [];
 
       async function loadApostasFromStorage() {
+        const loadLocal = () => {
+          const stored = localStorage.getItem(LS_AP);
+          if (!stored) return;
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) APOSTAS = parsed;
+          } catch (_) {}
+        };
+        if (!currentUser) {
+          loadLocal();
+          renderApostasUI();
+          return;
+        }
         try {
-          const { data, error } = await sb.from("apostas").select("*").order("concurso", { ascending: false });
+          const { data, error } = await sb.from("apostas").select("*").eq("user_id", currentUser.id).order("concurso", { ascending: false });
           if (!error && data) {
             APOSTAS = data.map(r => ({
               id: r.id,
@@ -3378,12 +3483,10 @@
             }));
             localStorage.setItem(LS_AP, JSON.stringify(APOSTAS));
           } else {
-            const stored = localStorage.getItem(LS_AP);
-            if (stored) { const p = JSON.parse(stored); if (Array.isArray(p)) APOSTAS = p; }
+            loadLocal();
           }
         } catch (e) {
-          const stored = localStorage.getItem(LS_AP);
-          if (stored) { try { const p = JSON.parse(stored); if (Array.isArray(p)) APOSTAS = p; } catch(_) {} }
+          loadLocal();
         }
         renderApostasUI();
       }
@@ -3415,7 +3518,9 @@
         }
         nums.sort((a, b) => a - b);
         try {
+          if (!currentUser) throw new Error("guest");
           const { data, error } = await sb.from("apostas").insert({
+            user_id: currentUser.id,
             concurso: concVal,
             dezenas: nums,
           }).select("*");
@@ -3435,7 +3540,7 @@
         await saveApostasToStorage();
         for (let i = 1; i <= 6; i++) document.getElementById(`apN${i}`).value = "";
         renderApostasUI();
-        showToast(`✅ Aposta salva no Supabase para o concurso #${concVal}!`);
+        showToast(`✅ Aposta salva ${currentUser ? "na sua conta" : "neste navegador"} para o concurso #${concVal}!`);
       }
 
       function quickBet() {
@@ -3454,7 +3559,7 @@
 
       async function deleteBet(id) {
         try {
-          await sb.from("apostas").delete().eq("id", id);
+          if (currentUser) await sb.from("apostas").delete().eq("id", id).eq("user_id", currentUser.id);
         } catch(_) {}
         APOSTAS = APOSTAS.filter((a) => a.id !== id);
         await saveApostasToStorage();
@@ -3483,23 +3588,16 @@
           listEl.innerHTML = "";
           document.getElementById("apTotalBets").textContent = "0";
           document.getElementById("apBestResult").textContent = "—";
-          document.getElementById("apWinCount").textContent = "0";
-          document.getElementById("apSpent").textContent = "R$ 0";
+          document.getElementById("apSpent").textContent = brl(0);
+          document.getElementById("apWon").textContent = brl(0);
+          document.getElementById("apNet").textContent = brl(0);
           return;
         }
         emptyEl.style.display = "none";
 
         // Compute summary
-        let bestAcertos = 0;
-        let quadras = 0, quinas = 0, senas = 0;
-        const results = APOSTAS.map((bet) => {
-          const res = checkBetResult(bet);
-          if (res.acertos > bestAcertos) bestAcertos = res.acertos;
-          if (res.acertos === 4) quadras++;
-          if (res.acertos === 5) quinas++;
-          if (res.acertos === 6) senas++;
-          return { bet, res };
-        });
+        const summary = LotteryMath.calculateBetSummary(APOSTAS, checkBetResult);
+        const { results, bestHits: bestAcertos, totalSpent, totalWon, net } = summary;
 
         document.getElementById("apTotalBets").textContent = APOSTAS.length;
         document.getElementById("apBestResult").textContent =
@@ -3507,9 +3605,11 @@
           bestAcertos === 5 ? "QUINA!" :
           bestAcertos === 4 ? "QUADRA!" :
           bestAcertos > 0 ? `${bestAcertos} acertos` : "—";
-        document.getElementById("apWinCount").textContent = quadras + quinas + senas;
-        document.getElementById("apSpent").textContent =
-          `R$ ${(APOSTAS.length * 5).toLocaleString("pt-BR")},00`;
+        document.getElementById("apSpent").textContent = brl(totalSpent);
+        document.getElementById("apWon").textContent = brl(totalWon);
+        const netElement = document.getElementById("apNet");
+        netElement.textContent = brl(net);
+        netElement.style.color = net >= 0 ? "var(--green)" : "var(--red)";
 
         // Group by concurso
         const groups = {};
@@ -3776,14 +3876,10 @@
       // ═══════ DESDOBRAMENTOS ═══════
       const desdSelected = new Set();
       const DESD_MIN = 7,
-        DESD_MAX = 15,
-        PRECO_JOGO = 5;
+        DESD_MAX = 15;
 
       function combCount(n, k) {
-        if (k < 0 || k > n) return 0;
-        let r = 1;
-        for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1);
-        return Math.round(r);
+        return LotteryMath.combinationCount(n, k);
       }
 
       function getCombinations(arr, k) {
@@ -3830,7 +3926,7 @@
       function updateDesdInfo() {
         const k = desdSelected.size;
         const cartoes = k >= 6 ? combCount(k, 6) : 0;
-        const custo = cartoes * PRECO_JOGO;
+        const custo = cartoes * LotteryMath.SIMPLE_BET_PRICE;
         document.getElementById("desdQtd").textContent =
           `${cartoes.toLocaleString("pt-BR")} cartões · ${k} dezenas`;
         document.getElementById("desdCost").textContent =
@@ -3895,7 +3991,7 @@
         }
         const pool = [...desdSelected].sort((a, b) => a - b);
         const combos = getCombinations(pool, 6);
-        const custo = combos.length * PRECO_JOGO;
+        const custo = combos.length * LotteryMath.SIMPLE_BET_PRICE;
         if (
           !confirm(
             `Gerar ${combos.length} cartões (R$ ${custo.toLocaleString("pt-BR")},00) para o concurso #${conc} e salvar em Minhas Apostas?`,
@@ -3903,9 +3999,14 @@
         )
           return;
 
-        const rows = combos.map((dz) => ({ concurso: conc, dezenas: dz }));
+        const rows = combos.map((dz) => ({
+          user_id: currentUser?.id,
+          concurso: conc,
+          dezenas: dz,
+        }));
         let salvouNaNuvem = false;
         try {
+          if (!currentUser) throw new Error("guest");
           const { data, error } = await sb.from("apostas").insert(rows).select("*");
           if (!error && data && data.length) {
             data.forEach((d) =>
@@ -3939,12 +4040,8 @@
       }
 
       // ── INIT ──
-      (async () => {
-        await loadMJFromStorage();
-        renderMJInputs();
-        await loadApostasFromStorage();
-        renderDesdGrid();
-      })();
+      initAuth();
+      renderDesdGrid();
       (async () => {
         // 1) Carrega dados estáticos (instantâneo, funciona no GitHub Pages)
         const hasStatic = await loadStatic();
