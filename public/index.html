@@ -11,6 +11,7 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="./lottery.js"></script>
     <style>
       :root {
         --bg: #080b14;
@@ -1246,6 +1247,7 @@
           <button class="btn btnp" onclick="doAuth('login')" style="flex:1;">&#128273; Entrar</button>
           <button class="btn btno" onclick="doAuth('register')" style="flex:1;">Cadastrar</button>
         </div>
+        <button class="btn btno" onclick="continueAsGuest()" style="width:100%; margin-top:10px;">Continuar sem conta</button>
         <div id="authMsg" style="margin-top:15px; font-size:13px; font-weight:bold; color:var(--red);"></div>
       </div>
     </div>
@@ -1277,6 +1279,7 @@
       <div class="ntab" onclick="showTab('mj', this)">&#127919; Meus Jogos</div>
       <div class="ntab" onclick="showTab('apostas', this)">&#128176; Minhas Apostas</div>
       <div class="ntab" onclick="showTab('deep', this)">&#128300; Análise Profunda</div>
+      <div class="ntab" onclick="showTab('histsug', this)">&#128202; Sugestões &times; Real</div>
       <div class="ntab" onclick="showTab('hist', this)">&#128203; Histórico</div>
       <div class="ntab" onclick="showTab('desd', this)">&#128274; Desdobramentos</div>
     </nav>
@@ -1371,18 +1374,7 @@
           </div>
         </div>
 
-        <!-- 📊 Histórico de Sugestões -->
-        <div style="margin-bottom: 20px">
-          <div style="font-size: 18px; font-weight: 800; margin-bottom: 16px;">
-            📊 Histórico de Sugestões x Resultados Reais
-          </div>
-          <div class="ap-summary" id="sugHistStats" style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
-            <div style="text-align:center;padding:20px;color:var(--muted);width:100%">Carregando estatísticas...</div>
-          </div>
-          <div id="sugHistList">
-             <div style="text-align:center;padding:20px;color:var(--muted)">Carregando histórico...</div>
-          </div>
-        </div>
+        <!-- (Histórico de Sugestões foi movido para a aba própria "Sugestões × Real") -->
         <div class="g2">
           <div class="card">
             <div class="sec">Frequência dos 60 números</div>
@@ -1781,10 +1773,28 @@
       </div>
 
       <!-- ══════════ DESDOBRAMENTOS ══════════ -->
+      <!-- ══════════ SUGESTÕES × RESULTADOS ══════════ -->
+      <div class="pane" id="tab-histsug">
+        <div style="margin-bottom: 20px">
+          <div style="font-size: 18px; font-weight: 800; margin-bottom: 4px;">
+            📊 Histórico de Sugestões x Resultados Reais
+          </div>
+          <div style="font-size: 12px; color: var(--muted); font-style: italic; margin-bottom: 16px;">
+            Compara as 3 sugestões geradas em cada concurso com o resultado oficial. Lembre: a Mega-Sena é aleatória — isto é acompanhamento, não previsão.
+          </div>
+          <div class="ap-summary" id="sugHistStats" style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+            <div style="text-align:center;padding:20px;color:var(--muted);width:100%">Carregando estatísticas...</div>
+          </div>
+          <div id="sugHistList">
+             <div style="text-align:center;padding:20px;color:var(--muted)">Carregando histórico...</div>
+          </div>
+        </div>
+      </div>
+
       <div class="pane" id="tab-desd">
         <div class="mji">
           <h2>&#128274; Desdobramentos Matemáticos</h2>
-          <p>Selecione de 7 a 15 dezenas. O sistema gerará as combinações (fechamento completo) garantindo a quadra/quina/sena caso os sorteados estejam entre os escolhidos.</p>
+          <p>Selecione de 7 a 15 dezenas. O sistema gera o <b>fechamento completo</b> (todas as combinações de 6). Assim, se 4, 5 ou 6 das dezenas sorteadas estiverem entre as suas, a quadra/quina/sena fica garantida em algum cartão. Mais dezenas = mais chance <b>e</b> mais custo.</p>
         </div>
         <div class="card">
           <div id="desdGrid" style="display:grid; grid-template-columns:repeat(10, 1fr); gap:5px; margin-bottom:20px;"></div>
@@ -1797,6 +1807,10 @@
                <button class="btn btno" onclick="desdSelected.clear(); renderDesdGrid();">&#128465; Limpar</button>
             </div>
           </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="sec">🎯 Modo garantia — o que este fechamento cobre</div>
+          <div id="desdGarantia"></div>
         </div>
       </div>
 
@@ -1984,8 +1998,79 @@
 
       // ── Supabase ──
       const SUPABASE_URL = "https://diyptbtsaqfjnucwakpn.supabase.co";
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeXB0YnRzYXFmam51Y3dha3BuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MzYyNDUsImV4cCI6MjA5OTExMjI0NX0.GCdAm3x6X-LDX6PCQBCBg7IkS8Xyt-Aarci8pS4L588";
-      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_WS90FW35z-M4rTIMCTZ6Kw_ucQBel-c";
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+      let currentUser = null;
+
+      function setAuthUI(user) {
+        currentUser = user || null;
+        const modal = document.getElementById("authModal");
+        const userSection = document.getElementById("userAuthSect");
+        const email = document.getElementById("userEmailDisplay");
+        modal.style.display = user ? "none" : "flex";
+        userSection.style.display = user ? "flex" : "none";
+        email.textContent = user?.email || "";
+      }
+
+      function continueAsGuest() {
+        document.getElementById("authModal").style.display = "none";
+        showToast("Modo visitante: os dados ficam somente neste navegador.");
+      }
+
+      async function doAuth(mode) {
+        const email = document.getElementById("authEmail").value.trim();
+        const password = document.getElementById("authPass").value;
+        const message = document.getElementById("authMsg");
+        message.style.color = "var(--red)";
+        if (!email || password.length < 6) {
+          message.textContent = "Informe um e-mail válido e uma senha com pelo menos 6 caracteres.";
+          return;
+        }
+        message.textContent = "Aguarde...";
+        const result = mode === "register"
+          ? await sb.auth.signUp({ email, password })
+          : await sb.auth.signInWithPassword({ email, password });
+        if (result.error) {
+          message.textContent = result.error.message;
+          return;
+        }
+        if (mode === "register" && !result.data.session) {
+          message.style.color = "var(--green)";
+          message.textContent = "Cadastro criado. Confirme o e-mail para entrar.";
+          return;
+        }
+        message.textContent = "";
+      }
+
+      async function doLogout() {
+        await sb.auth.signOut();
+        showToast("Sessão encerrada. O modo visitante continua disponível.");
+      }
+
+      async function reloadUserData() {
+        MJ_DB_ID = null;
+        MJG = [Array(6).fill("")];
+        APOSTAS = [];
+        await loadMJFromStorage();
+        renderMJInputs();
+        await loadApostasFromStorage();
+        if (CUR) {
+          verificarAcertosSugestoes(CUR.results || []);
+          renderSugHistory();
+        }
+      }
+
+      async function initAuth() {
+        const { data } = await sb.auth.getSession();
+        setAuthUI(data.session?.user || null);
+        await reloadUserData();
+        sb.auth.onAuthStateChange((_event, session) => {
+          const nextUser = session?.user || null;
+          if (nextUser?.id === currentUser?.id) return;
+          setAuthUI(nextUser);
+          setTimeout(reloadUserData, 0);
+        });
+      }
 
       // ── localStorage keys (fallback) ──
       const LS_MJ = "megasena_meus_jogos";
@@ -2449,21 +2534,24 @@
       }
 
       async function saveSugestoes(concurso, sugs) {
+        if (!currentUser) return;
         try {
           const payload = sugs.map(s => ({ nums: s.nums, strat: s.strat, score: s.score }));
-          const { data: existing } = await sb.from("sugestoes_historico").select("id,resultado").eq("concurso", concurso).maybeSingle();
+          const { data: existing } = await sb.from("sugestoes_historico").select("id,resultado").eq("user_id", currentUser.id).eq("concurso", concurso).maybeSingle();
           if (!existing) {
-            await sb.from("sugestoes_historico").insert({ concurso, sugestoes: payload });
+            await sb.from("sugestoes_historico").insert({ user_id: currentUser.id, concurso, sugestoes: payload });
           }
           // Se já existir, não sobrescreve (mantém resultado se já foi verificado)
         } catch (e) { /* ignore */ }
       }
 
       async function verificarAcertosSugestoes(results) {
+        if (!currentUser) return;
         try {
           const { data: pendentes, error } = await sb
             .from("sugestoes_historico")
             .select("*")
+            .eq("user_id", currentUser.id)
             .is("resultado", null);
           if (error || !pendentes || !pendentes.length) return;
           const updates = [];
@@ -2478,7 +2566,7 @@
                 resultado,
                 acertos,
                 verificado_em: new Date().toISOString(),
-              }).eq("id", sug.id)
+              }).eq("id", sug.id).eq("user_id", currentUser.id)
             );
           }
           if (updates.length) await Promise.all(updates);
@@ -2490,10 +2578,16 @@
         const el = document.getElementById("sugHistList");
         const statsEl = document.getElementById("sugHistStats");
         if (!el) return;
+        if (!currentUser) {
+          el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted)">Entre em uma conta para acompanhar seu histórico de sugestões.</div>`;
+          if (statsEl) statsEl.innerHTML = "";
+          return;
+        }
         try {
           const { data, error } = await sb
             .from("sugestoes_historico")
             .select("*")
+            .eq("user_id", currentUser.id)
             .not("resultado", "is", null)
             .order("concurso", { ascending: false })
             .limit(30);
@@ -2995,8 +3089,20 @@
       let MJG = [Array(6).fill("")];
 
       async function loadMJFromStorage() {
+        const stored = localStorage.getItem(LS_MJ);
+        const loadLocal = () => {
+          if (!stored) return;
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length) MJG = parsed;
+          } catch (_) {}
+        };
+        if (!currentUser) {
+          loadLocal();
+          return;
+        }
         try {
-          const { data, error } = await sb.from("meus_jogos").select("id,jogos").order("id", { ascending: false }).limit(1);
+          const { data, error } = await sb.from("meus_jogos").select("id,jogos").eq("user_id", currentUser.id).limit(1);
           if (!error && data && data.length > 0) {
             const parsed = data[0].jogos;
             if (Array.isArray(parsed) && parsed.length > 0) {
@@ -3004,13 +3110,10 @@
               MJ_DB_ID = data[0].id;
             }
           } else {
-            // fallback localStorage
-            const stored = localStorage.getItem(LS_MJ);
-            if (stored) { const p = JSON.parse(stored); if (Array.isArray(p) && p.length) MJG = p; }
+            loadLocal();
           }
         } catch (e) {
-          const stored = localStorage.getItem(LS_MJ);
-          if (stored) { try { const p = JSON.parse(stored); if (Array.isArray(p) && p.length) MJG = p; } catch(_) {} }
+          loadLocal();
         }
       }
 
@@ -3018,10 +3121,11 @@
       async function saveMJToStorage() {
         try {
           localStorage.setItem(LS_MJ, JSON.stringify(MJG));
+          if (!currentUser) return;
           if (MJ_DB_ID) {
-            await sb.from("meus_jogos").update({ jogos: MJG, updated_at: new Date().toISOString() }).eq("id", MJ_DB_ID);
+            await sb.from("meus_jogos").update({ jogos: MJG, updated_at: new Date().toISOString() }).eq("id", MJ_DB_ID).eq("user_id", currentUser.id);
           } else {
-            const { data } = await sb.from("meus_jogos").insert({ jogos: MJG }).select("id");
+            const { data } = await sb.from("meus_jogos").insert({ user_id: currentUser.id, jogos: MJG }).select("id");
             if (data && data[0]) MJ_DB_ID = data[0].id;
           }
         } catch (e) { /* ignore */ }
@@ -3355,8 +3459,21 @@
       let APOSTAS = [];
 
       async function loadApostasFromStorage() {
+        const loadLocal = () => {
+          const stored = localStorage.getItem(LS_AP);
+          if (!stored) return;
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) APOSTAS = parsed;
+          } catch (_) {}
+        };
+        if (!currentUser) {
+          loadLocal();
+          renderApostasUI();
+          return;
+        }
         try {
-          const { data, error } = await sb.from("apostas").select("*").order("concurso", { ascending: false });
+          const { data, error } = await sb.from("apostas").select("*").eq("user_id", currentUser.id).order("concurso", { ascending: false });
           if (!error && data) {
             APOSTAS = data.map(r => ({
               id: r.id,
@@ -3366,12 +3483,10 @@
             }));
             localStorage.setItem(LS_AP, JSON.stringify(APOSTAS));
           } else {
-            const stored = localStorage.getItem(LS_AP);
-            if (stored) { const p = JSON.parse(stored); if (Array.isArray(p)) APOSTAS = p; }
+            loadLocal();
           }
         } catch (e) {
-          const stored = localStorage.getItem(LS_AP);
-          if (stored) { try { const p = JSON.parse(stored); if (Array.isArray(p)) APOSTAS = p; } catch(_) {} }
+          loadLocal();
         }
         renderApostasUI();
       }
@@ -3403,7 +3518,9 @@
         }
         nums.sort((a, b) => a - b);
         try {
+          if (!currentUser) throw new Error("guest");
           const { data, error } = await sb.from("apostas").insert({
+            user_id: currentUser.id,
             concurso: concVal,
             dezenas: nums,
           }).select("*");
@@ -3423,7 +3540,7 @@
         await saveApostasToStorage();
         for (let i = 1; i <= 6; i++) document.getElementById(`apN${i}`).value = "";
         renderApostasUI();
-        showToast(`✅ Aposta salva no Supabase para o concurso #${concVal}!`);
+        showToast(`✅ Aposta salva ${currentUser ? "na sua conta" : "neste navegador"} para o concurso #${concVal}!`);
       }
 
       function quickBet() {
@@ -3442,7 +3559,7 @@
 
       async function deleteBet(id) {
         try {
-          await sb.from("apostas").delete().eq("id", id);
+          if (currentUser) await sb.from("apostas").delete().eq("id", id).eq("user_id", currentUser.id);
         } catch(_) {}
         APOSTAS = APOSTAS.filter((a) => a.id !== id);
         await saveApostasToStorage();
@@ -3471,23 +3588,16 @@
           listEl.innerHTML = "";
           document.getElementById("apTotalBets").textContent = "0";
           document.getElementById("apBestResult").textContent = "—";
-          document.getElementById("apWinCount").textContent = "0";
-          document.getElementById("apSpent").textContent = "R$ 0";
+          document.getElementById("apSpent").textContent = brl(0);
+          document.getElementById("apWon").textContent = brl(0);
+          document.getElementById("apNet").textContent = brl(0);
           return;
         }
         emptyEl.style.display = "none";
 
         // Compute summary
-        let bestAcertos = 0;
-        let quadras = 0, quinas = 0, senas = 0;
-        const results = APOSTAS.map((bet) => {
-          const res = checkBetResult(bet);
-          if (res.acertos > bestAcertos) bestAcertos = res.acertos;
-          if (res.acertos === 4) quadras++;
-          if (res.acertos === 5) quinas++;
-          if (res.acertos === 6) senas++;
-          return { bet, res };
-        });
+        const summary = LotteryMath.calculateBetSummary(APOSTAS, checkBetResult);
+        const { results, bestHits: bestAcertos, totalSpent, totalWon, net } = summary;
 
         document.getElementById("apTotalBets").textContent = APOSTAS.length;
         document.getElementById("apBestResult").textContent =
@@ -3495,9 +3605,11 @@
           bestAcertos === 5 ? "QUINA!" :
           bestAcertos === 4 ? "QUADRA!" :
           bestAcertos > 0 ? `${bestAcertos} acertos` : "—";
-        document.getElementById("apWinCount").textContent = quadras + quinas + senas;
-        document.getElementById("apSpent").textContent =
-          `R$ ${(APOSTAS.length * 5).toLocaleString("pt-BR")},00`;
+        document.getElementById("apSpent").textContent = brl(totalSpent);
+        document.getElementById("apWon").textContent = brl(totalWon);
+        const netElement = document.getElementById("apNet");
+        netElement.textContent = brl(net);
+        netElement.style.color = net >= 0 ? "var(--green)" : "var(--red)";
 
         // Group by concurso
         const groups = {};
@@ -3761,12 +3873,175 @@
       if ("Notification" in window && Notification.permission === "default")
         Notification.requestPermission();
 
+      // ═══════ DESDOBRAMENTOS ═══════
+      const desdSelected = new Set();
+      const DESD_MIN = 7,
+        DESD_MAX = 15;
+
+      function combCount(n, k) {
+        return LotteryMath.combinationCount(n, k);
+      }
+
+      function getCombinations(arr, k) {
+        const res = [];
+        const cur = [];
+        (function go(start) {
+          if (cur.length === k) {
+            res.push(cur.slice());
+            return;
+          }
+          for (let i = start; i < arr.length; i++) {
+            cur.push(arr[i]);
+            go(i + 1);
+            cur.pop();
+          }
+        })(0);
+        return res;
+      }
+
+      function renderDesdGrid() {
+        const grid = document.getElementById("desdGrid");
+        if (!grid) return;
+        let html = "";
+        for (let n = 1; n <= 60; n++) {
+          const on = desdSelected.has(n);
+          html += `<div onclick="toggleDesd(${n})" style="cursor:pointer;user-select:none;text-align:center;padding:9px 0;border-radius:8px;font-weight:700;font-family:var(--mono);font-size:13px;transition:.12s;border:1px solid ${on ? "transparent" : "var(--border)"};background:${on ? "var(--green)" : "var(--bg2)"};color:${on ? "#04110b" : "var(--text)"}">${fmt(n)}</div>`;
+        }
+        grid.innerHTML = html;
+        updateDesdInfo();
+      }
+
+      function toggleDesd(n) {
+        if (desdSelected.has(n)) desdSelected.delete(n);
+        else {
+          if (desdSelected.size >= DESD_MAX) {
+            showToast(`⚠️ Máximo de ${DESD_MAX} dezenas por fechamento.`);
+            return;
+          }
+          desdSelected.add(n);
+        }
+        renderDesdGrid();
+      }
+
+      function updateDesdInfo() {
+        const k = desdSelected.size;
+        const cartoes = k >= 6 ? combCount(k, 6) : 0;
+        const custo = cartoes * LotteryMath.SIMPLE_BET_PRICE;
+        document.getElementById("desdQtd").textContent =
+          `${cartoes.toLocaleString("pt-BR")} cartões · ${k} dezenas`;
+        document.getElementById("desdCost").textContent =
+          `Custo total: R$ ${custo.toLocaleString("pt-BR")},00`;
+        const btn = document.getElementById("desdBtn");
+        if (btn) btn.disabled = !(k >= DESD_MIN && k <= DESD_MAX);
+        renderDesdGarantia(k);
+      }
+
+      // Modo garantia — probabilidade (hipergeométrica) de o fechamento
+      // efetivamente garantir quadra/quina/sena, comparado a 1 jogo simples.
+      function renderDesdGarantia(k) {
+        const el = document.getElementById("desdGarantia");
+        if (!el) return;
+        if (k < 6) {
+          el.innerHTML = `<div style="color:var(--muted);font-style:italic;text-align:center;padding:14px">Selecione ${DESD_MIN}–${DESD_MAX} dezenas para ver o que o fechamento garante.</div>`;
+          return;
+        }
+        const total = combCount(60, 6); // 50.063.860
+        // P(exatamente j dos 6 sorteados estão entre as suas k dezenas)
+        const hyper = (j) => (combCount(k, j) * combCount(60 - k, 6 - j)) / total;
+        const pQuadra = hyper(4) + hyper(5) + hyper(6);
+        const pQuina = hyper(5) + hyper(6);
+        const pSena = hyper(6);
+        // referência: 1 jogo simples de 6 dezenas
+        const sQuadra = (combCount(6, 4) * combCount(54, 2)) / total;
+        const sQuina = (combCount(6, 5) * combCount(54, 1)) / total;
+        const sSena = 1 / total;
+
+        const odds = (p) => (p > 0 ? `1 em ${Math.round(1 / p).toLocaleString("pt-BR")}` : "—");
+        const pct = (p) => (p <= 0 ? "0%" : (p * 100 < 0.01 ? (p * 100).toFixed(4) : (p * 100).toFixed(2)) + "%");
+        const mult = (p, s) => (s > 0 && p > 0 ? `${(p / s).toFixed(1)}×` : "—");
+
+        const linha = (nome, cor, p, s) => `
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--dim)">
+            <div style="flex:none;width:70px;font-weight:800;color:${cor}">${nome}</div>
+            <div style="flex:1">
+              <div style="font-size:13px">${pct(p)} <span style="color:var(--muted)">(${odds(p)})</span></div>
+              <div style="font-size:10px;color:var(--muted)">1 jogo simples: ${pct(s)} → seu fechamento é <b style="color:${cor}">${mult(p, s)}</b> mais provável</div>
+            </div>
+          </div>`;
+
+        el.innerHTML = `
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">
+            Probabilidade de <b>pelo menos</b> essa quantidade das 6 dezenas sorteadas cair entre as suas <b>${k}</b> — o que garante o prêmio em algum cartão:
+          </div>
+          ${linha("Quadra", "var(--cyan)", pQuadra, sQuadra)}
+          ${linha("Quina", "var(--gold)", pQuina, sQuina)}
+          ${linha("Sena", "var(--green)", pSena, sSena)}
+          <div style="font-size:11px;color:var(--muted);margin-top:10px;font-style:italic">
+            ⚠️ Jogar mais dezenas aumenta a chance porque você compra mais combinações — a probabilidade por real gasto <b>não</b> melhora. A Mega-Sena é aleatória.
+          </div>`;
+      }
+
+      async function gerarDesdobramento() {
+        const k = desdSelected.size;
+        if (k < DESD_MIN || k > DESD_MAX) return;
+        const conc = parseInt(document.getElementById("desdConc").value);
+        if (!conc || conc < 1) {
+          showToast("⚠️ Informe o concurso alvo.");
+          return;
+        }
+        const pool = [...desdSelected].sort((a, b) => a - b);
+        const combos = getCombinations(pool, 6);
+        const custo = combos.length * LotteryMath.SIMPLE_BET_PRICE;
+        if (
+          !confirm(
+            `Gerar ${combos.length} cartões (R$ ${custo.toLocaleString("pt-BR")},00) para o concurso #${conc} e salvar em Minhas Apostas?`,
+          )
+        )
+          return;
+
+        const rows = combos.map((dz) => ({
+          user_id: currentUser?.id,
+          concurso: conc,
+          dezenas: dz,
+        }));
+        let salvouNaNuvem = false;
+        try {
+          if (!currentUser) throw new Error("guest");
+          const { data, error } = await sb.from("apostas").insert(rows).select("*");
+          if (!error && data && data.length) {
+            data.forEach((d) =>
+              APOSTAS.push({
+                id: d.id,
+                concurso: d.concurso,
+                dezenas: d.dezenas,
+                createdAt: d.created_at,
+              }),
+            );
+            salvouNaNuvem = true;
+          }
+        } catch (_) {}
+        if (!salvouNaNuvem) {
+          combos.forEach((dz, i) =>
+            APOSTAS.push({
+              id: Date.now() + i,
+              concurso: conc,
+              dezenas: dz,
+              createdAt: new Date().toISOString(),
+            }),
+          );
+        }
+        await saveApostasToStorage();
+        renderApostasUI();
+        desdSelected.clear();
+        renderDesdGrid();
+        showToast(
+          `✅ ${combos.length} cartões gerados para #${conc}${salvouNaNuvem ? " (salvos na nuvem)" : " (salvos localmente)"}!`,
+        );
+      }
+
       // ── INIT ──
-      (async () => {
-        await loadMJFromStorage();
-        renderMJInputs();
-        await loadApostasFromStorage();
-      })();
+      initAuth();
+      renderDesdGrid();
       (async () => {
         // 1) Carrega dados estáticos (instantâneo, funciona no GitHub Pages)
         const hasStatic = await loadStatic();

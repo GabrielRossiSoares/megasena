@@ -2,10 +2,14 @@
 
 Dashboard completo com estatísticas, probabilidades e sugestão de jogo — atualização automática em tempo real.
 
+> A Mega-Sena é aleatória. Estatísticas históricas e sugestões não aumentam o retorno esperado de uma aposta.
+
 Funciona de **dois modos**:
 
 - **Ao vivo (local):** `node server.js` no seu PC — SSE em tempo real + polling a cada 5 min.
 - **Estático (GitHub Pages):** site publicado no seu GitHub, sempre no ar. Um **robô (GitHub Actions)** busca os concursos novos sozinho e republica — sem precisar do seu PC ligado.
+
+Usuários autenticados salvam apostas, jogos e histórico de sugestões de forma privada no Supabase. O modo visitante continua disponível e usa apenas o `localStorage` do navegador.
 
 ## ☁️ Publicar no GitHub Pages (acessar de qualquer lugar)
 
@@ -62,6 +66,9 @@ Abra no navegador: **http://localhost:3000**
 | 📊 **Gráficos** | Frequência, soma por sorteio, par/ímpar |
 | 📋 **Histórico** | Últimos 50 resultados com scroll |
 | 📐 **Padrões** | Soma ideal, pares×ímpares, baixos×altos |
+| 🔐 **Conta privada** | Autenticação Supabase com isolamento por usuário (RLS) |
+| 🧮 **Desdobramentos** | Fechamento completo de 7 a 15 dezenas, custo e garantias |
+| 💰 **ROI** | Investimento, prêmios oficiais e resultado líquido |
 
 ---
 
@@ -99,6 +106,17 @@ Depois aplica filtros:
 | `npm run enrich` | Rebaixa tudo p/ preencher jackpot, cidades e premiações |
 | `npm run update` | Busca apenas os concursos novos (usado pelo robô) |
 | `npm run build` | Gera `public/data.json` e `public/stats.json` (site estático) |
+| `npm test` | Executa os testes automatizados |
+| `npm run check` | Valida os scripts e executa os testes |
+
+## 🔐 Configuração segura do Supabase
+
+1. Copie `.env.example` apenas como referência e configure as variáveis no ambiente; não versione `.env`.
+2. Use `SUPABASE_DB_URL` com `node setup-supabase.js` para aplicar a migração de tabelas e RLS.
+3. Use `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` somente para `node populate-supabase.js`.
+4. A chave `service_role` nunca deve aparecer no frontend, em commits ou em logs.
+
+O frontend contém somente a chave pública `anon`, protegida pelas políticas RLS em `supabase/migrations/`.
 
 Arquitetura dos dados: `caixa.js` (normalização + gravação atômica) e `stats.js` (cálculo das estatísticas) são compartilhados por `server.js`, `build.js` e `update.js` — uma única fonte da verdade.
 
