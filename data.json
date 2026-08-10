@@ -1,7 +1,41 @@
 {
-  "generatedAt": "2026-08-07T05:26:50.714Z",
-  "total": 3041,
+  "generatedAt": "2026-08-10T12:52:07.632Z",
+  "total": 3042,
   "results": [
+    {
+      "concurso": 3042,
+      "data": "09/08/2026",
+      "dezenas": [
+        2,
+        5,
+        10,
+        35,
+        40,
+        53
+      ],
+      "ganhadores": 1,
+      "premio": 164895645.5,
+      "acumulado": false,
+      "premioTotalSena": 164895645.5,
+      "arrecadacao": 141538830,
+      "acumuladoProx": 0,
+      "estimativaProx": 3500000,
+      "quina": {
+        "ganhadores": 246,
+        "premio": 22927.51
+      },
+      "quadra": {
+        "ganhadores": 13158,
+        "premio": 706.56
+      },
+      "cidades": [
+        {
+          "municipio": "FORTALEZA",
+          "uf": "CE",
+          "ganhadores": 1
+        }
+      ]
+    },
     {
       "concurso": 3041,
       "data": "06/08/2026",
