@@ -1,7 +1,41 @@
 {
-  "generatedAt": "2026-08-10T12:52:07.632Z",
-  "total": 3042,
+  "generatedAt": "2026-08-12T05:22:46.402Z",
+  "total": 3043,
   "results": [
+    {
+      "concurso": 3043,
+      "data": "11/08/2026",
+      "dezenas": [
+        10,
+        11,
+        16,
+        37,
+        42,
+        53
+      ],
+      "ganhadores": 1,
+      "premio": 3077413.08,
+      "acumulado": false,
+      "premioTotalSena": 3077413.08,
+      "arrecadacao": 25098792,
+      "acumuladoProx": 0,
+      "estimativaProx": 3500000,
+      "quina": {
+        "ganhadores": 48,
+        "premio": 20836.65
+      },
+      "quadra": {
+        "ganhadores": 3746,
+        "premio": 440.09
+      },
+      "cidades": [
+        {
+          "municipio": "ALVORADA D'OESTE",
+          "uf": "RO",
+          "ganhadores": 1
+        }
+      ]
+    },
     {
       "concurso": 3042,
       "data": "09/08/2026",
