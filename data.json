@@ -1,7 +1,41 @@
 {
-  "generatedAt": "2026-08-21T12:31:07.401Z",
-  "total": 3047,
+  "generatedAt": "2026-08-24T12:33:33.095Z",
+  "total": 3048,
   "results": [
+    {
+      "concurso": 3048,
+      "data": "23/08/2026",
+      "dezenas": [
+        2,
+        6,
+        27,
+        39,
+        44,
+        50
+      ],
+      "ganhadores": 1,
+      "premio": 57261598.1,
+      "acumulado": false,
+      "premioTotalSena": 57261598.1,
+      "arrecadacao": 65249736,
+      "acumuladoProx": 0,
+      "estimativaProx": 3500000,
+      "quina": {
+        "ganhadores": 76,
+        "premio": 34212.24
+      },
+      "quadra": {
+        "ganhadores": 4346,
+        "premio": 986.17
+      },
+      "cidades": [
+        {
+          "municipio": "CANAL ELETRONICO",
+          "uf": "--",
+          "ganhadores": 1
+        }
+      ]
+    },
     {
       "concurso": 3047,
       "data": "20/08/2026",
