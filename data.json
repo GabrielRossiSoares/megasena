@@ -1,7 +1,41 @@
 {
-  "generatedAt": "2026-09-16T05:26:36.716Z",
-  "total": 3058,
+  "generatedAt": "2026-09-18T05:22:46.384Z",
+  "total": 3059,
   "results": [
+    {
+      "concurso": 3059,
+      "data": "17/09/2026",
+      "dezenas": [
+        1,
+        2,
+        7,
+        18,
+        33,
+        35
+      ],
+      "ganhadores": 1,
+      "premio": 101970706.13,
+      "acumulado": false,
+      "premioTotalSena": 101970706.13,
+      "arrecadacao": 77871672,
+      "acumuladoProx": 21381420.73,
+      "estimativaProx": 28000000,
+      "quina": {
+        "ganhadores": 98,
+        "premio": 31664.29
+      },
+      "quadra": {
+        "ganhadores": 6697,
+        "premio": 763.77
+      },
+      "cidades": [
+        {
+          "municipio": "PRESIDENTE VENCESLAU",
+          "uf": "SP",
+          "ganhadores": 1
+        }
+      ]
+    },
     {
       "concurso": 3058,
       "data": "15/09/2026",
