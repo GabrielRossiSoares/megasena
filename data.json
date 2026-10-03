@@ -1,7 +1,35 @@
 {
-  "generatedAt": "2026-10-01T17:48:44.632Z",
-  "total": 3064,
+  "generatedAt": "2026-10-03T15:30:54.451Z",
+  "total": 3065,
   "results": [
+    {
+      "concurso": 3065,
+      "data": "01/10/2026",
+      "dezenas": [
+        8,
+        10,
+        30,
+        38,
+        50,
+        53
+      ],
+      "ganhadores": 0,
+      "premio": 0,
+      "acumulado": true,
+      "premioTotalSena": 0,
+      "arrecadacao": 58386840,
+      "acumuladoProx": 72267592.25,
+      "estimativaProx": 82000000,
+      "quina": {
+        "ganhadores": 47,
+        "premio": 49503.22
+      },
+      "quadra": {
+        "ganhadores": 3642,
+        "premio": 1053.03
+      },
+      "cidades": []
+    },
     {
       "concurso": 3064,
       "data": "29/09/2026",
