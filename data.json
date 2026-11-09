@@ -1,7 +1,41 @@
 {
-  "generatedAt": "2026-11-07T17:14:36.525Z",
-  "total": 3082,
+  "generatedAt": "2026-11-09T21:48:07.519Z",
+  "total": 3083,
   "results": [
+    {
+      "concurso": 3083,
+      "data": "08/11/2026",
+      "dezenas": [
+        22,
+        25,
+        29,
+        37,
+        46,
+        54
+      ],
+      "ganhadores": 1,
+      "premio": 59526903.72,
+      "acumulado": false,
+      "premioTotalSena": 59526903.72,
+      "arrecadacao": 46208712,
+      "acumuladoProx": 0,
+      "estimativaProx": 3500000,
+      "quina": {
+        "ganhadores": 61,
+        "premio": 23220.26
+      },
+      "quadra": {
+        "ganhadores": 3117,
+        "premio": 649.17
+      },
+      "cidades": [
+        {
+          "municipio": "GOIANIA",
+          "uf": "GO",
+          "ganhadores": 1
+        }
+      ]
+    },
     {
       "concurso": 3082,
       "data": "06/11/2026",
