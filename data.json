@@ -1,7 +1,41 @@
 {
-  "generatedAt": "2026-11-09T21:48:07.519Z",
-  "total": 3083,
+  "generatedAt": "2026-11-11T07:19:57.958Z",
+  "total": 3084,
   "results": [
+    {
+      "concurso": 3084,
+      "data": "10/11/2026",
+      "dezenas": [
+        6,
+        14,
+        22,
+        30,
+        31,
+        37
+      ],
+      "ganhadores": 1,
+      "premio": 3287949.91,
+      "acumulado": false,
+      "premioTotalSena": 3287949.91,
+      "arrecadacao": 26815890,
+      "acumuladoProx": 16640032.07,
+      "estimativaProx": 20000000,
+      "quina": {
+        "ganhadores": 29,
+        "premio": 28344.4
+      },
+      "quadra": {
+        "ganhadores": 2264,
+        "premio": 518.66
+      },
+      "cidades": [
+        {
+          "municipio": "ITURAMA",
+          "uf": "MG",
+          "ganhadores": 1
+        }
+      ]
+    },
     {
       "concurso": 3083,
       "data": "08/11/2026",
